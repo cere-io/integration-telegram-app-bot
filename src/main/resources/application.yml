@@ -1,0 +1,22 @@
+quarkus:
+  rest-client:
+    tg-bot-api:
+      url: 'https://api.telegram.org/bot${telegram.bot.token}'
+    tg-file-api:
+      url: 'https://api.telegram.org/file/bot${telegram.bot.token}'
+  kotlin-serialization:
+    json:
+      encode-defaults: true
+      ignore-unknown-keys: true
+  swagger-ui:
+    always-include: true
+  container-image:
+    build: true
+    group: 'cerebellumnetwork'
+    name: 'tg-streaming-bot'
+    tag: 'dev'
+    push: false
+  jib:
+    platforms:
+      #- 'linux/amd64'
+      - 'linux/arm64'
