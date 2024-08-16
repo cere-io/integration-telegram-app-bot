@@ -24,6 +24,15 @@ Fill `.env` with the proper values
 TELEGRAM_BOT_TOKEN=<token from @BotFather>
 TELEGRAM_WEBHOOK_URL=<your tunnel URL>
 TELEGRAM_WEBHOOK_TOKEN=<auth token for your webhook endpoint>
+
+DDC_BUCKET=<DDC bucket with videos>
+DDC_WALLET_MNEMONIC=<DDC wallet mnemonic>
+DDC_WALLET_ALGORITHM=<SR_25519 or ED_25519>
+
+TON_API_TOKEN=<get from @tonapibot>
+TON_API_URL=https://toncenter.com/api/v2
+TON_WALLET_BOUNCEABLE=<address to retrieve payments, detect here https://toncenter.com/api/v2/#/accounts/detect_address_detectAddress_get>
+TON_WALLET_NONBOUNCEABLE=<address to retrieve payments, detect here https://toncenter.com/api/v2/#/accounts/detect_address_detectAddress_get>
 ```
 
 Run your application in dev mode:
