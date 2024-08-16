@@ -30,3 +30,8 @@ quarkus:
     db-kind: 'postgresql'
     devservices:
       port: 5432
+  cache:
+    caffeine:
+      initial-capacity: 10000
+      maximum-size: 10000
+      metrics-enabled: true

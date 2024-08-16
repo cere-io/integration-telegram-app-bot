@@ -30,6 +30,9 @@ dependencies {
     implementation("io.quarkus:quarkus-jdbc-postgresql")
     implementation("io.quarkus:quarkus-flyway")
 
+    // Cache
+    implementation("io.quarkus:quarkus-cache")
+
     // gRPC
     implementation("io.quarkus:quarkus-grpc")
 

@@ -1,5 +1,6 @@
 package network.cere.telegram.bot.streaming.ton
 
+import io.quarkus.cache.CacheResult
 import io.smallrye.common.annotation.RunOnVirtualThread
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
@@ -18,6 +19,6 @@ interface TonApi {
     @GET
     @Path("detectAddress")
     @RunOnVirtualThread
-    //TODO cache me
+    @CacheResult(cacheName = "ton-address-cache")
     fun detectAddress(@RestQuery address: String): DetectAddressResponse
 }
