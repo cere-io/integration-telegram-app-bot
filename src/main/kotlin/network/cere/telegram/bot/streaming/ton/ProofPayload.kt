@@ -10,8 +10,9 @@ import jakarta.persistence.Table
 @Table(name = "proof_payloads")
 data class ProofPayload(
     @Id
-    val address: String,
     val payload: String,
 ) : PanacheEntityBase {
-    companion object : PanacheCompanionBase<ProofPayload, String>
+    companion object : PanacheCompanionBase<ProofPayload, String> {
+        fun exists(payload: String) = findById(payload) != null
+    }
 }

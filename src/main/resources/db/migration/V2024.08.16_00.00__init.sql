@@ -1,8 +1,7 @@
 create table proof_payloads
 (
-    address varchar(255) not null,
-    payload varchar(255),
-    primary key (address)
+    payload text not null,
+    primary key (payload)
 );
 
 create table subscriptions
@@ -10,29 +9,29 @@ create table subscriptions
     durationInDays integer not null,
     id             integer not null,
     price          float4  not null,
-    description    varchar(255),
+    description    text    not null,
     primary key (id)
 );
 
 create table user_subscriptions
 (
-    subscription_id integer      not null unique,
-    expiresAt       timestamp(6),
-    address         varchar(255) not null,
+    subscription_id integer      not null,
+    expiresAt       timestamp(6) not null,
+    address         text         not null,
     primary key (address)
 );
 
 create table videos
 (
-    duration     bigint       not null,
-    fileSize     bigint       not null,
-    height       bigint       not null,
-    width        bigint       not null,
-    description  varchar(255),
-    mimeType     varchar(255),
-    name         varchar(255),
-    thumbnailUrl varchar(255),
-    url          varchar(255) not null,
+    duration     bigint not null,
+    fileSize     bigint not null,
+    height       bigint not null,
+    width        bigint not null,
+    description  text   not null,
+    mimeType     text,
+    name         text   not null,
+    thumbnailUrl text,
+    url          text   not null,
     primary key (url)
 );
 

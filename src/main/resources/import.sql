@@ -16,7 +16,3 @@ VALUES (1, 7, 'Weekly', 0.01),
        (2, 30, 'Monthly', 0.1),
        (3, 365, 'Yearly', 1)
 ;
-
-INSERT INTO user_subscriptions(address, subscription_id)
-VALUES ('EQC1Tdxck3nJR_N2QiQ2nETY56IPgh2pWsGKbiGF0dSoUNNu', 1)
-;
