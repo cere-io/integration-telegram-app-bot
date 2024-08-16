@@ -34,4 +34,20 @@ quarkus:
     caffeine:
       initial-capacity: 10000
       maximum-size: 10000
-      metrics-enabled: true
+  native:
+    native-image-xmx: '6g'
+  flyway:
+    migrate-at-start: true
+    baseline-on-migrate: true
+  hibernate-orm:
+    log:
+      sql: true
+    sql-load-script: 'import.sql'
+    database:
+      generation: 'none'
+"%prod":
+  quarkus:
+    hibernate-orm:
+      log:
+        sql: false
+      sql-load-script: 'no-file'
