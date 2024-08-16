@@ -50,10 +50,9 @@ class SubscriptionsResource(private val tonConfig: TonConfig, @RestClient privat
             return RestResponse.status(RestResponse.Status.CONFLICT, "Already subscribed")
         }
         val tx = tonApi.getTransactions(bounceableAddress).result
-            .firstOrNull {
-                it.inMsg.source == bounceableAddress && it.inMsg.destination == tonConfig.wallet().bounceable()
-            }
-            ?.inMsg
+            .flatMap { it.outMsgs }
+            .filter { it.source == bounceableAddress && it.destination == tonConfig.wallet().bounceable() }
+            .maxByOrNull { it.value }
         if (tx != null) {
             val matchedSubscription = Subscription.listAll(Sort.by("price", Sort.Direction.Descending))
                 .firstOrNull { TON_VALUE_UNIT * it.price <= tx.value }

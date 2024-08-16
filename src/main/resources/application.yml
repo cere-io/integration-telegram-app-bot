@@ -34,8 +34,6 @@ quarkus:
     caffeine:
       initial-capacity: 10000
       maximum-size: 10000
-  native:
-    native-image-xmx: '6g'
   flyway:
     migrate-at-start: true
     baseline-on-migrate: true

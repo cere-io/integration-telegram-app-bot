@@ -11,11 +11,13 @@ data class GetTransactionsResponse(
 @Serializable
 data class Transaction(
     @SerialName("in_msg")
-    val inMsg: InMsg,
+    val inMsg: Message,
+    @SerialName("out_msgs")
+    val outMsgs: List<Message>,
 )
 
 @Serializable
-data class InMsg(
+data class Message(
     val source: String,
     val destination: String,
     val value: Long,
