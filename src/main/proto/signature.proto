@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package common;
+
+option java_multiple_files = true;
+option java_package = "network.cere.ddc";
+
+message Signature {
+  Algorithm algorithm = 1;
+  bytes signer = 2;
+  bytes value = 3;
+
+  enum Algorithm {
+    ED_25519 = 0;
+    SR_25519 = 1;
+  }
+}

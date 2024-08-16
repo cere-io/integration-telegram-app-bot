@@ -4,6 +4,8 @@ quarkus:
       url: 'https://api.telegram.org/bot${telegram.bot.token}'
     tg-file-api:
       url: 'https://api.telegram.org/file/bot${telegram.bot.token}'
+    ton-api:
+      url: '${ton.api.url}'
   kotlin-serialization:
     json:
       encode-defaults: true
@@ -20,3 +22,11 @@ quarkus:
     platforms:
       #- 'linux/amd64'
       - 'linux/arm64'
+  http:
+    cors:
+      ~: true
+      origins: '*'
+  datasource:
+    db-kind: 'postgresql'
+    devservices:
+      port: 5432

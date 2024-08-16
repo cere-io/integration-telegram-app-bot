@@ -11,6 +11,7 @@ plugins {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven { url = uri("https://repo.repsy.io/mvn/chrynan/public") }
 }
 
 val quarkusPlatformGroupId: String by project
@@ -21,7 +22,16 @@ dependencies {
     // BOM
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
 
+    // Telegram
     implementation("com.github.omarmiatello.telegram:dataclass:7.8")
+
+    // DB
+    implementation("io.quarkus:quarkus-hibernate-orm-panache-kotlin")
+    implementation("io.quarkus:quarkus-jdbc-postgresql")
+    implementation("io.quarkus:quarkus-flyway")
+
+    // gRPC
+    implementation("io.quarkus:quarkus-grpc")
 
     // Web
     implementation("io.quarkus:quarkus-rest-kotlin-serialization")
@@ -32,6 +42,11 @@ dependencies {
     // Kotlin
     implementation("io.quarkus:quarkus-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+
+    // Crypto
+    implementation("dev.sublab:encrypting-kotlin:1.0.0")
+    implementation("dev.sublab:hashing-kotlin:1.0.0")
+    implementation("dev.sublab:common-kotlin:1.0.0")
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")
@@ -65,4 +80,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 }
 kotlin {
     jvmToolchain(21)
+}
+
+java {
 }
