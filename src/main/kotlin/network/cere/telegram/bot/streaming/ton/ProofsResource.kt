@@ -40,10 +40,10 @@ class ProofsResource(
         val address = tonApi.detectAddress(rq.address).result
         val bounceableAddress = address.bounceable.b64url
         val subscription = UserSubscription.findById(bounceableAddress)
-        if (subscription == null || subscription.expiresAt.isBefore(LocalDateTime.now())) {
-            return RestResponse.status(RestResponse.Status.UNAUTHORIZED)
+        return if (subscription == null || subscription.expiresAt.isBefore(LocalDateTime.now())) {
+            RestResponse.ok("")
+        } else {
+            RestResponse.ok(wallet.grantAccess())
         }
-
-        return RestResponse.ok(wallet.grantAccess())
     }
 }
