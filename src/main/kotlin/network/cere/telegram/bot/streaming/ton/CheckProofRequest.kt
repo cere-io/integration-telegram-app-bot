@@ -14,10 +14,10 @@ data class CheckProofRequest(
 
 @Serializable
 data class Proof(
-    val timestamp: Long,
-    val domain: Domain,
-    val payload: String,
-    val signature: String,
+    val timestamp: Long?,
+    val domain: Domain?,
+    val payload: String?,
+    val signature: String?,
     @SerialName("state_init")
     val stateInit: String,
 )

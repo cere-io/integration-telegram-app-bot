@@ -33,9 +33,6 @@ class ProofsResource(
     @RunOnVirtualThread
     fun issueDdcAuthToken(rq: CheckProofRequest): RestResponse<String> {
         //TODO verify rq properly
-        if (!ProofPayload.exists(rq.proof.payload)) {
-            return RestResponse.status(RestResponse.Status.UNAUTHORIZED)
-        }
 
         val address = tonApi.detectAddress(rq.address).result
         val bounceableAddress = address.bounceable.b64url
