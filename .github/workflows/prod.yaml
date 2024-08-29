@@ -1,0 +1,21 @@
+name: Release to prod
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    uses: Cere-IO/reusable-workflows/.github/workflows/deploy-to-ecr.yaml@master
+    with:
+      runs-on: '["self-hosted", "cere-io-large"]'
+      environment: prd
+      aws_account_id: ${{ vars.DEV_NETWORK_AWS_ACCOUNT_ID }}
+      repository: integration-telegram-app-bot
+      file: ./Dockerfile
+    secrets: inherit

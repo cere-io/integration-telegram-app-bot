@@ -56,7 +56,6 @@ dependencies {
 
     // Build
     implementation("io.quarkus:quarkus-arc")
-    implementation("io.quarkus:quarkus-container-image-jib")
 
     // Tests
     testImplementation("io.quarkus:quarkus-junit5")
