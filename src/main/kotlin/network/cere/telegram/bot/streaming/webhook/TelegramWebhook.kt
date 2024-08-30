@@ -1,5 +1,6 @@
 package network.cere.telegram.bot.streaming.webhook
 
+import com.github.omarmiatello.telegram.Update
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import kotlinx.serialization.json.JsonElement
@@ -11,9 +12,10 @@ import org.jboss.resteasy.reactive.RestResponse.Status.UNAUTHORIZED
 import org.jboss.resteasy.reactive.server.ServerExceptionMapper
 import org.slf4j.LoggerFactory
 
-@Path("v1/telegram/webhook")
+@Path("telegram/webhook")
 class TelegramWebhook(
     @ConfigProperty(name = "telegram.webhook.token") private val authToken: String,
+    private val botConsumer: BotConsumer,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -22,13 +24,17 @@ class TelegramWebhook(
     }
 
     @POST
-    fun handle(@RestHeader(AUTH_HEADER_NAME) auth: String, update: JsonElement) {
+    fun handle(@RestHeader(AUTH_HEADER_NAME) auth: String, payload: JsonElement): RestResponse<Unit> {
         require(auth == authToken)
-        log.info(update.toString())
+        val update = Update.fromJson(payload.toString())
+        log.info(update.toJson())
+        botConsumer.handleUpdate(update)
+        return RestResponse.ok()
     }
 
     @ServerExceptionMapper
     fun mapIllegalArgumentException(e: IllegalArgumentException): RestResponse<String> {
+        log.warn(e.message)
         return create(UNAUTHORIZED, e.message.orEmpty()).build()
     }
 }
