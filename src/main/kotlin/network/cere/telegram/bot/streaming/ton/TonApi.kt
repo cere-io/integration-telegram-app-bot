@@ -21,4 +21,9 @@ interface TonApi {
     @RunOnVirtualThread
     @CacheResult(cacheName = "ton-address-cache")
     fun detectAddress(@RestQuery address: String): DetectAddressResponse
+
+    @GET
+    @Path("getAddressBalance")
+    @RunOnVirtualThread
+    fun getAddressBalance(@RestQuery address: String)  : GetAddressBalanceResponse
 }
