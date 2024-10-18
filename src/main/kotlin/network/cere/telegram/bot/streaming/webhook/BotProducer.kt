@@ -4,7 +4,6 @@ import com.github.omarmiatello.telegram.*
 import jakarta.enterprise.context.ApplicationScoped
 import network.cere.telegram.bot.api.BotApi
 import org.eclipse.microprofile.rest.client.inject.RestClient
-import kotlin.random.Random
 
 @ApplicationScoped
 class BotProducer(@RestClient private val botApi: BotApi) {
@@ -17,7 +16,7 @@ class BotProducer(@RestClient private val botApi: BotApi) {
             chat_id = chatId,
             text = text,
            // message_effect_id = MessageEffectId("5104841245755180586"),
-            reply_markup = replyMarkup
+            reply_markup = replyMarkup,
         )
         botApi.sendMessage(telegramRequest)
     }

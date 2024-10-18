@@ -5,7 +5,6 @@ import network.cere.ddc.Signature
 
 @ConfigMapping(prefix = "ddc")
 interface DdcConfig {
-    fun bucket(): Long
     fun wallet(): Wallet
 
     interface Wallet {

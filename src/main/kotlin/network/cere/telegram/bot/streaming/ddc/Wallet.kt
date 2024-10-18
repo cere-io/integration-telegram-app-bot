@@ -1,9 +1,11 @@
 package network.cere.telegram.bot.streaming.ddc
 
+import dev.sublab.base58.StringBase58
 import dev.sublab.base58.base58
 import dev.sublab.ed25519.ed25519
 import dev.sublab.encrypting.keys.KeyPair
 import dev.sublab.encrypting.mnemonic.DefaultMnemonic
+import dev.sublab.hex.hex
 import dev.sublab.sr25519.sr25519
 import jakarta.enterprise.context.ApplicationScoped
 import network.cere.ddc.AuthToken
@@ -24,9 +26,15 @@ class Wallet(private val ddcConfig: DdcConfig) {
         Signature.Algorithm.UNRECOGNIZED -> throw IllegalArgumentException("Unrecognized signature algorithm")
     }
 
-    fun grantAccess(): String {
+    val publicKey = keyPair.publicKey.hex.encode(true)
+
+    fun grantAccess(botDdcAccessTokenBase58: String): String {
+        val botToken = StringBase58(botDdcAccessTokenBase58)
+            .toByteString()
+            .toByteArray()
+            .let(AuthToken::parseFrom)
         val payload = Payload.newBuilder()
-            .setBucketId(ddcConfig.bucket())
+            .setPrev(botToken)
             .setExpiresAt(System.currentTimeMillis() + TOKEN_DURATION)
             .setCanDelegate(false)
             .addOperations(Operation.GET)

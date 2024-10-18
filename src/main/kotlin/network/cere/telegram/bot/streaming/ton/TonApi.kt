@@ -14,7 +14,7 @@ interface TonApi {
     @GET
     @Path("getTransactions")
     @RunOnVirtualThread
-    fun getTransactions(@RestQuery address: String): GetTransactionsResponse
+    fun getTransactions(@RestQuery address: String, @RestQuery archival: Boolean = true): GetTransactionsResponse
 
     @GET
     @Path("detectAddress")
