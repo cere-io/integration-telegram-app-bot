@@ -12,17 +12,13 @@ class RegisterWebhook(@RestClient botApi: BotApi, webhookConfig: WebhookConfig) 
 
     init {
         log.info("Registering Telegram webhook")
-        if (botApi.getWebhookInfo().result?.url?.isEmpty() != false) {
-            val rq = TelegramRequest.SetWebhookRequest(
-                url = webhookConfig.url(),
-                max_connections = webhookConfig.maxConnections().toLong(),
-                drop_pending_updates = false,
-                secret_token = webhookConfig.token(),
-            )
-            botApi.setWebhook(rq)
-            log.info("Telegram webhook set")
-        } else {
-            log.info("Telegram webhook already set")
-        }
+        val rq = TelegramRequest.SetWebhookRequest(
+            url = webhookConfig.url(),
+            max_connections = webhookConfig.maxConnections().toLong(),
+            drop_pending_updates = true, //TODO set to false
+            secret_token = webhookConfig.token(),
+        )
+        botApi.setWebhook(rq)
+        log.info("Telegram webhook set")
     }
 }

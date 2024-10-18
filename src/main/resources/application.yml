@@ -6,7 +6,7 @@ quarkus:
       url: '${ton.api.url}'
   kotlin-serialization:
     json:
-      encode-defaults: true
+      encode-defaults: false
       ignore-unknown-keys: true
   swagger-ui:
     always-include: true
@@ -23,14 +23,24 @@ quarkus:
       initial-capacity: 10000
       maximum-size: 10000
   flyway:
-    migrate-at-start: true
+    migrate-at-start: false
     baseline-on-migrate: true
   hibernate-orm:
     log:
       sql: true
     sql-load-script: 'import.sql'
     database:
-      generation: 'none'
+      generation: 'update'
+"%dev":
+  quarkus:
+    rest-client:
+      logging:
+        scope: 'request-response'
+        body-limit: 10000
+    log:
+      category:
+        "org.jboss.resteasy.reactive.client.logging":
+          level: 'DEBUG'
 "%prod":
   quarkus:
     hibernate-orm:
