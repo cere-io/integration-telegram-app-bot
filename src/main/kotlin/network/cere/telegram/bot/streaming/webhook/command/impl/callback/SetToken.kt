@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import network.cere.telegram.bot.streaming.ddc.Wallet
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
+import network.cere.telegram.bot.streaming.user.ContextEntity
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 
 @ApplicationScoped
@@ -23,7 +24,7 @@ class SetToken(
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
         val chatContext = json.decodeFromString<ChatContext>(user.chatContextJson)
-        chatContext.entityName = "token"
+        chatContext.entityName = ContextEntity.TOKEN
         user.chatContextJson = json.encodeToString(chatContext)
         user.persistAndFlush()
 

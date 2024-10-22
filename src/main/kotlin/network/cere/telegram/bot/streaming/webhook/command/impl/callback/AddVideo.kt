@@ -7,6 +7,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
+import network.cere.telegram.bot.streaming.user.ContextEntity
+import network.cere.telegram.bot.streaming.user.ContextModificationStep
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 
 @ApplicationScoped
@@ -21,8 +23,8 @@ class AddVideo(
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
         val chatContext = json.decodeFromString<ChatContext>(user.chatContextJson)
-        chatContext.entityName = "video"
-        chatContext.modificationStep = "url"
+        chatContext.entityName = ContextEntity.VIDEO
+        chatContext.modificationStep = ContextModificationStep.URL
         user.chatContextJson = json.encodeToString(chatContext)
         user.persistAndFlush()
 

@@ -13,6 +13,8 @@ import network.cere.telegram.bot.streaming.ddc.Wallet
 import network.cere.telegram.bot.streaming.ton.TonApi
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
+import network.cere.telegram.bot.streaming.user.ContextEntity
+import network.cere.telegram.bot.streaming.user.ContextModificationStep
 import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
@@ -38,9 +40,11 @@ class BotTextCommand(
         val chatContext = json.decodeFromString<ChatContext>(user.chatContextJson)
 
         when (chatContext.entityName) {
-            "token" -> handleSetToken(message, user, chatContext)
-            "payoutsAddress" -> handleSetPayoutsAddress(message, user, chatContext)
-            "video" -> handleAddVideo(message, user, chatContext)
+            ContextEntity.SUBSCRIPTION -> TODO()
+            ContextEntity.TOKEN -> handleSetToken(message, user, chatContext)
+            ContextEntity.PAYOUT_ADDRESS -> handleSetPayoutsAddress(message, user, chatContext)
+            ContextEntity.VIDEO -> handleAddVideo(message, user, chatContext)
+            null -> return
         }
     }
 
@@ -99,7 +103,7 @@ class BotTextCommand(
 
     private fun handleAddVideo(message: Message, user: BotUser, chatContext: ChatContext) {
         when (chatContext.modificationStep) {
-            "url" -> {
+            ContextModificationStep.URL -> {
                 val url = URI.create(requireNotNull(message.text))
                     .let { "${it.scheme}://${it.host}${it.path}" }
                 val currentChannel = requireNotNull(chatContext.channelId)
@@ -108,35 +112,35 @@ class BotTextCommand(
                 channel.addVideo(video)
                 channel.persistAndFlush()
                 chatContext.entityId = video.id
-                chatContext.modificationStep = "title"
+                chatContext.modificationStep = ContextModificationStep.TITLE
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video title")
             }
 
-            "title" -> {
+            ContextModificationStep.TITLE -> {
                 val title = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
                 video.title = title
                 video.persistAndFlush()
-                chatContext.modificationStep = "description"
+                chatContext.modificationStep = ContextModificationStep.DESCRIPTION
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video description")
             }
 
-            "description" -> {
+            ContextModificationStep.DESCRIPTION -> {
                 val description = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
                 video.description = description
                 video.persistAndFlush()
-                chatContext.modificationStep = "thumbnail"
+                chatContext.modificationStep = ContextModificationStep.THUMBNAIL
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video thumbnail URL")
             }
 
-            "thumbnail" -> {
+            ContextModificationStep.THUMBNAIL -> {
                 val thumbnailUrl = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
                 video.thumbnailUrl = thumbnailUrl
@@ -152,6 +156,8 @@ class BotTextCommand(
                     replyKeyboardMarkup
                 )
             }
+
+            else -> return
         }
     }
 }

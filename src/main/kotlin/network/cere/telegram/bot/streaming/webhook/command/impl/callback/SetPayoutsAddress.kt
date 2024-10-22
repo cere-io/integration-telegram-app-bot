@@ -7,6 +7,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
+import network.cere.telegram.bot.streaming.user.ContextEntity
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 
 @ApplicationScoped
@@ -21,7 +22,7 @@ class SetPayoutsAddress(
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
         val chatContext = json.decodeFromString<ChatContext>(user.chatContextJson)
-        chatContext.entityName = "payoutsAddress"
+        chatContext.entityName = ContextEntity.PAYOUT_ADDRESS
         user.chatContextJson = json.encodeToString(chatContext)
         user.persistAndFlush()
 
