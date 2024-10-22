@@ -1,6 +1,8 @@
 package network.cere.telegram.bot.streaming.webhook.command.impl.share
 
-import com.github.omarmiatello.telegram.*
+import com.github.omarmiatello.telegram.ChatId
+import com.github.omarmiatello.telegram.TelegramRequest
+import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

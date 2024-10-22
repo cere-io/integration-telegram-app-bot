@@ -1,6 +1,8 @@
 package network.cere.telegram.bot.streaming.webhook
 
-import com.github.omarmiatello.telegram.*
+import com.github.omarmiatello.telegram.ChatId
+import com.github.omarmiatello.telegram.KeyboardOption
+import com.github.omarmiatello.telegram.TelegramRequest
 import jakarta.enterprise.context.ApplicationScoped
 import network.cere.telegram.bot.api.BotApi
 import org.eclipse.microprofile.rest.client.inject.RestClient

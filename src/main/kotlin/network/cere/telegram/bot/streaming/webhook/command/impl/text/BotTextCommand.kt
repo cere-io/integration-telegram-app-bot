@@ -1,7 +1,5 @@
 package network.cere.telegram.bot.streaming.webhook.command.impl.text
 
-import com.github.omarmiatello.telegram.InlineKeyboardButton
-import com.github.omarmiatello.telegram.InlineKeyboardMarkup
 import com.github.omarmiatello.telegram.Message
 import com.github.omarmiatello.telegram.Update
 import dev.sublab.base58.base58
@@ -20,7 +18,6 @@ import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import java.net.URI
-import java.net.URL
 import java.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toKotlinDuration

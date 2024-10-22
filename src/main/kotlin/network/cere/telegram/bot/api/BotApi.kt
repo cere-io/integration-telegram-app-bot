@@ -1,6 +1,8 @@
 package network.cere.telegram.bot.api
 
-import com.github.omarmiatello.telegram.*
+import com.github.omarmiatello.telegram.TelegramRequest
+import com.github.omarmiatello.telegram.TelegramResponse
+import com.github.omarmiatello.telegram.WebhookInfo
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path

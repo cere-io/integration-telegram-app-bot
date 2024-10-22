@@ -25,5 +25,5 @@ interface TonApi {
     @GET
     @Path("getAddressBalance")
     @RunOnVirtualThread
-    fun getAddressBalance(@RestQuery address: String)  : GetAddressBalanceResponse
+    fun getAddressBalance(@RestQuery address: String): GetAddressBalanceResponse
 }

@@ -1,13 +1,11 @@
 package network.cere.telegram.bot.streaming.webhook.command.impl.callback
 
-import com.github.omarmiatello.telegram.InlineKeyboardButton
-import com.github.omarmiatello.telegram.InlineKeyboardMarkup
 import com.github.omarmiatello.telegram.Message
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.Json
-import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.channel.Channel
+import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
