@@ -47,5 +47,5 @@ data class Channel(
         return this
     }
 
-    fun isConfigured() = config.payoutAddress != null && config.botDdcAccessTokenBase58 != null
+    fun isConfigured() = config.payoutAddress != null && config.botDdcAccessTokenBase58 != null && subscriptions.isNotEmpty()
 }

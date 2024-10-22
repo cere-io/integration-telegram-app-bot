@@ -7,6 +7,12 @@ val replyKeyboardMarkup = InlineKeyboardMarkup(
     inline_keyboard = listOf(
         listOf(
             InlineKeyboardButton(
+                text = "Configure subscriptions",
+                callback_data = "/configureSubscriptions"
+            )
+        ),
+        listOf(
+            InlineKeyboardButton(
                 text = "Set Bot Access Token",
                 callback_data = "/setToken"
             ),

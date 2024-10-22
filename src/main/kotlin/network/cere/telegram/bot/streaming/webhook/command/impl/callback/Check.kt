@@ -36,6 +36,9 @@ class Check(
         } else {
             reply.append("Payouts address is not configured\n")
         }
+        if (channel.subscriptions.isEmpty()) {
+            reply.append("No subscriptions configured\n")
+        }
         reply.append("Number of videos: ${channel.videos.size}\n")
         if (channel.isConfigured()) {
             reply.append("You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}")

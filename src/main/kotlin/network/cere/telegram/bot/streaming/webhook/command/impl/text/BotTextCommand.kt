@@ -10,6 +10,7 @@ import kotlinx.serialization.json.Json
 import network.cere.ddc.AuthToken
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.ddc.Wallet
+import network.cere.telegram.bot.streaming.subscription.Subscription
 import network.cere.telegram.bot.streaming.ton.TonApi
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
@@ -40,11 +41,56 @@ class BotTextCommand(
         val chatContext = json.decodeFromString<ChatContext>(user.chatContextJson)
 
         when (chatContext.entityName) {
-            ContextEntity.SUBSCRIPTION -> TODO()
+            ContextEntity.SUBSCRIPTION -> handleAddSubscription(message, user, chatContext)
             ContextEntity.TOKEN -> handleSetToken(message, user, chatContext)
             ContextEntity.PAYOUT_ADDRESS -> handleSetPayoutsAddress(message, user, chatContext)
             ContextEntity.VIDEO -> handleAddVideo(message, user, chatContext)
             null -> return
+        }
+    }
+
+    private fun handleAddSubscription(message: Message, user: BotUser, chatContext: ChatContext) {
+        when (chatContext.modificationStep) {
+            ContextModificationStep.DURATION -> {
+                val duration = requireNotNull(message.text).toInt()
+                val currentChannel = requireNotNull(chatContext.channelId)
+                val channel = requireNotNull(Channel.findById(currentChannel))
+                val subscription = Subscription(durationInDays = duration, description = "", price = 0.01f)
+                channel.addSubscription(subscription)
+                channel.persistAndFlush()
+                chatContext.entityId = subscription.id
+                chatContext.modificationStep = ContextModificationStep.DESCRIPTION
+                user.chatContextJson = json.encodeToString(chatContext)
+                user.persistAndFlush()
+                botProducer.sendTextMessage(message.chat.id, "Send me the subscription description")
+            }
+            ContextModificationStep.DESCRIPTION -> {
+                val description = requireNotNull(message.text)
+                val subscription = requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
+                subscription.description = description
+                subscription.persistAndFlush()
+                chatContext.modificationStep = ContextModificationStep.PRICE
+                user.chatContextJson = json.encodeToString(chatContext)
+                user.persistAndFlush()
+                botProducer.sendTextMessage(message.chat.id, "Send me the subscription price in TON")
+            }
+            ContextModificationStep.PRICE -> {
+                val price = requireNotNull(message.text).toFloat()
+                val subscription = requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
+                subscription.price = price
+                subscription.persistAndFlush()
+                chatContext.entityName = null
+                chatContext.modificationStep = null
+                chatContext.entityId = null
+                user.chatContextJson = json.encodeToString(chatContext)
+                user.persistAndFlush()
+                botProducer.sendTextMessage(
+                    message.chat.id,
+                    "Subscription configured",
+                    replyKeyboardMarkup
+                )
+            }
+            else -> return
         }
     }
 

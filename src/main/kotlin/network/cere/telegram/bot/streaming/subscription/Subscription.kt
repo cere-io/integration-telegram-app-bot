@@ -18,8 +18,8 @@ data class Subscription(
     @ManyToOne(fetch = FetchType.LAZY)
     var channel: Channel? = null,
     val durationInDays: Int,
-    val description: String,
-    val price: Float,
+    var description: String,
+    var price: Float,
 ) : PanacheEntity() {
     companion object : PanacheCompanion<Subscription>
 }

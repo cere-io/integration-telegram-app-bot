@@ -19,7 +19,7 @@ import kotlin.random.asKotlinRandom
 @Path("proofs")
 class ProofsResource(
     @RestClient private val tonApi: TonApi,
-    private val random: Random,
+    @Suppress("CdiInjectionPointsInspection") private val random: Random,
     private val wallet: Wallet,
 ) {
     @GET

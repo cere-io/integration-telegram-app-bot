@@ -12,7 +12,6 @@ import kotlinx.serialization.json.long
 import network.cere.telegram.bot.api.BotApi
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.channel.ChannelConfig
-import network.cere.telegram.bot.streaming.subscription.Subscription
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
@@ -55,8 +54,6 @@ class ShareChannel(
                     config = ChannelConfig(),
                     title = requireNotNull(sharedChat.result?.jsonObject?.getValue("title").toString())
                 ).also {
-                    // TODO make configurable
-                    defaultSubscriptions().forEach(it::addSubscription)
                     it.persistAndFlush()
                 }
                 botProducer.sendTextMessage(
@@ -69,22 +66,4 @@ class ShareChannel(
                 botProducer.sendTextMessage(currentChat, "Add bot to the channel first")
             }
     }
-
-    private fun defaultSubscriptions() = listOf(
-        Subscription(
-            durationInDays = 7,
-            description = "Weekly",
-            price = 0.01f
-        ),
-        Subscription(
-            durationInDays = 30,
-            description = "Monthly",
-            price = 0.1f
-        ),
-        Subscription(
-            durationInDays = 365,
-            description = "Yearly",
-            price = 1f
-        )
-    )
 }

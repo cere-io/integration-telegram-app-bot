@@ -29,11 +29,11 @@ CREATE TABLE proof_payloads
 
 CREATE TABLE subscriptions
 (
-    id             BIGINT NOT NULL,
+    id             BIGINT  NOT NULL,
     channel_id     BIGINT,
-    durationInDays INTEGER,
-    description    TEXT   NOT NULL,
-    price          FLOAT,
+    durationInDays INTEGER NOT NULL,
+    description    TEXT    NOT NULL,
+    price          FLOAT   NOT NULL,
     CONSTRAINT pk_subscriptions PRIMARY KEY (id)
 );
 
