@@ -19,6 +19,8 @@ import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
+import java.net.URI
+import java.net.URL
 import java.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toKotlinDuration
@@ -30,7 +32,6 @@ class BotTextCommand(
     private val wallet: Wallet,
     @RestClient private val tonApi: TonApi,
 ) {
-    //TODO check if admin
     fun tryHandle(update: Update) {
         if (update.message?.text == null) return
 
@@ -102,8 +103,8 @@ class BotTextCommand(
     private fun handleAddVideo(message: Message, user: BotUser, chatContext: ChatContext) {
         when (chatContext.modificationStep) {
             "url" -> {
-                val url = requireNotNull(message.text)
-                //TODO validate URL
+                val url = URI.create(requireNotNull(message.text))
+                    .let { "${it.scheme}://${it.host}${it.path}" }
                 val currentChannel = requireNotNull(chatContext.channelId)
                 val channel = requireNotNull(Channel.findById(currentChannel))
                 val video = Video(url = url)
@@ -140,7 +141,6 @@ class BotTextCommand(
 
             "thumbnail" -> {
                 val thumbnailUrl = requireNotNull(message.text)
-                //TODO validate URL
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
                 video.thumbnailUrl = thumbnailUrl
                 video.persistAndFlush()

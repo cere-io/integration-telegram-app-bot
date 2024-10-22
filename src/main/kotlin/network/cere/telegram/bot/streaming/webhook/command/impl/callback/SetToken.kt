@@ -18,7 +18,6 @@ class SetToken(
 ) : AbstractBotCallbackCommand {
     override fun command() = "/setToken"
 
-    //TODO check if admin
     override fun handle(update: Update) {
         val message = requireNotNull(update.callback_query?.message as Message)
         val from = requireNotNull(update.callback_query?.from)

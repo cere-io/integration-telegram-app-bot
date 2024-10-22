@@ -17,7 +17,7 @@ data class UserSubscription(
     @OneToOne(targetEntity = Subscription::class, optional = false)
     val subscription: Subscription,
 
-    val expiresAt: LocalDateTime, //TODO clean up old subscriptions
+    val expiresAt: LocalDateTime,
 ) : PanacheEntityBase {
     companion object : PanacheCompanionBase<UserSubscription, UserSubscriptionKey> {
         fun exists(address: String, channelId: Long) = findById(UserSubscriptionKey(address, channelId)) != null

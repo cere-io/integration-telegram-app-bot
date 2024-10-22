@@ -44,10 +44,14 @@ class ProofsResource(
         val address = tonApi.detectAddress(rq.address).result
         val bounceableAddress = address.bounceable.b64url
         val subscription = UserSubscription.findById(bounceableAddress, channel.id)
-        return if (subscription == null || subscription.expiresAt.isBefore(LocalDateTime.now())) {
-            RestResponse.ok("")
-        } else {
-            RestResponse.ok(wallet.grantAccess(requireNotNull(channel.config.botDdcAccessTokenBase58)))
+        return when {
+            subscription == null -> RestResponse.ok("")
+            subscription.expiresAt.isBefore(LocalDateTime.now()) -> {
+                subscription.delete()
+                RestResponse.ok("")
+            }
+
+            else -> RestResponse.ok(wallet.grantAccess(requireNotNull(channel.config.botDdcAccessTokenBase58)))
         }
     }
 }

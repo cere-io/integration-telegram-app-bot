@@ -21,7 +21,6 @@ class Check(
 ) : AbstractBotCallbackCommand {
     override fun command() = "/check"
 
-    // TODO check if admin
     override fun handle(update: Update) {
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
