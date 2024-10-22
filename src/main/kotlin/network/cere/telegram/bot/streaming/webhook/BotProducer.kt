@@ -15,7 +15,6 @@ class BotProducer(@RestClient private val botApi: BotApi) {
         val telegramRequest = TelegramRequest.SendMessageRequest(
             chat_id = chatId,
             text = text,
-           // message_effect_id = MessageEffectId("5104841245755180586"),
             reply_markup = replyMarkup,
         )
         botApi.sendMessage(telegramRequest)

@@ -10,6 +10,7 @@ import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
+import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
@@ -42,36 +43,10 @@ class Check(
         if (channel.isConfigured()) {
             reply.append("You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}")
         }
-        // TODO replace hardcoded commands
         botProducer.sendTextMessage(
             requireNotNull(update.callback_query?.message as Message).chat.id,
             reply.toString(),
-            InlineKeyboardMarkup(
-                inline_keyboard = listOf(
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Set Bot Access Token",
-                            callback_data = "/setToken"
-                        ),
-                        InlineKeyboardButton(
-                            text = "Set payouts address",
-                            callback_data = "/setPayoutsAddress"
-                        ),
-                    ),
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Add video",
-                            callback_data = "/addVideo"
-                        ),
-                    ),
-                    listOf(
-                        InlineKeyboardButton(
-                            text = "Check configuration",
-                            callback_data = "/check"
-                        ),
-                    )
-                )
-            )
+            replyKeyboardMarkup
         )
     }
 }

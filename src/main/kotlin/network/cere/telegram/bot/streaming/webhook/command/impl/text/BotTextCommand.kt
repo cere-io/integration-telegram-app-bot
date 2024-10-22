@@ -17,6 +17,7 @@ import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
+import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import java.time.Duration
 import kotlin.time.DurationUnit
@@ -68,36 +69,10 @@ class BotTextCommand(
             val expiresIn = Duration.ofMillis(it.payload.expiresAt - System.currentTimeMillis())
                 .toKotlinDuration()
                 .toString(DurationUnit.DAYS)
-            // TODO replace hardcoded commands
             botProducer.sendTextMessage(
                 message.chat.id,
                 "Access token is configured for channel. Bucket id is ${it.payload.bucketId}, expires in $expiresIn",
-                InlineKeyboardMarkup(
-                    inline_keyboard = listOf(
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Set Bot Access Token",
-                                callback_data = "/setToken"
-                            ),
-                            InlineKeyboardButton(
-                                text = "Set payouts address",
-                                callback_data = "/setPayoutsAddress"
-                            ),
-                        ),
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Add video",
-                                callback_data = "/addVideo"
-                            ),
-                        ),
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Check configuration",
-                                callback_data = "/check"
-                            ),
-                        )
-                    )
-                )
+                replyKeyboardMarkup
             )
         }
     }
@@ -116,36 +91,10 @@ class BotTextCommand(
         }.onFailure {
             botProducer.sendTextMessage(message.chat.id, "Invalid address")
         }.onSuccess {
-            // TODO replace hardcoded commands
             botProducer.sendTextMessage(
                 message.chat.id,
                 "Payouts address set to $address",
-                InlineKeyboardMarkup(
-                    inline_keyboard = listOf(
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Set Bot Access Token",
-                                callback_data = "/setToken"
-                            ),
-                            InlineKeyboardButton(
-                                text = "Set payouts address",
-                                callback_data = "/setPayoutsAddress"
-                            ),
-                        ),
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Add video",
-                                callback_data = "/addVideo"
-                            ),
-                        ),
-                        listOf(
-                            InlineKeyboardButton(
-                                text = "Check configuration",
-                                callback_data = "/check"
-                            ),
-                        )
-                    )
-                )
+                replyKeyboardMarkup
             )
         }
     }
@@ -200,36 +149,10 @@ class BotTextCommand(
                 chatContext.entityId = null
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
-                // TODO replace hardcoded commands
                 botProducer.sendTextMessage(
                     message.chat.id,
                     "Video added to the channel",
-                    InlineKeyboardMarkup(
-                        inline_keyboard = listOf(
-                            listOf(
-                                InlineKeyboardButton(
-                                    text = "Set Bot Access Token",
-                                    callback_data = "/setToken"
-                                ),
-                                InlineKeyboardButton(
-                                    text = "Set payouts address",
-                                    callback_data = "/setPayoutsAddress"
-                                ),
-                            ),
-                            listOf(
-                                InlineKeyboardButton(
-                                    text = "Add video",
-                                    callback_data = "/addVideo"
-                                ),
-                            ),
-                            listOf(
-                                InlineKeyboardButton(
-                                    text = "Check configuration",
-                                    callback_data = "/check"
-                                ),
-                            )
-                        )
-                    )
+                    replyKeyboardMarkup
                 )
             }
         }

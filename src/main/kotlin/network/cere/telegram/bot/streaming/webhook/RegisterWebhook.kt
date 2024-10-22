@@ -15,7 +15,7 @@ class RegisterWebhook(@RestClient botApi: BotApi, webhookConfig: WebhookConfig) 
         val rq = TelegramRequest.SetWebhookRequest(
             url = webhookConfig.url(),
             max_connections = webhookConfig.maxConnections().toLong(),
-            drop_pending_updates = true, //TODO set to false
+            drop_pending_updates = true,
             secret_token = webhookConfig.token(),
         )
         botApi.setWebhook(rq)
