@@ -23,14 +23,13 @@ quarkus:
       initial-capacity: 10000
       maximum-size: 10000
   flyway:
-    migrate-at-start: false
+    migrate-at-start: true
     baseline-on-migrate: true
   hibernate-orm:
     log:
       sql: true
-    sql-load-script: 'import.sql'
     database:
-      generation: 'update'
+      generation: 'none'
 "%dev":
   quarkus:
     rest-client:
@@ -46,4 +45,3 @@ quarkus:
     hibernate-orm:
       log:
         sql: false
-      sql-load-script: 'no-file'
