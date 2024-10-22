@@ -11,4 +11,10 @@ interface DdcConfig {
         fun mnemonic(): String
         fun algorithm(): Signature.Algorithm
     }
+
+    fun token(): Token
+
+    interface Token {
+        fun duration(): Long
+    }
 }

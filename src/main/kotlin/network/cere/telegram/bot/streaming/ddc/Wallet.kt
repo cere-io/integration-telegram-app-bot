@@ -15,14 +15,16 @@ import network.cere.ddc.Signature
 
 @ApplicationScoped
 class Wallet(private val ddcConfig: DdcConfig) {
-    private companion object {
-        //TODO make configurable
-        private const val TOKEN_DURATION = 60L * 60 * 1000 // 1 hour
-    }
-
     private val keyPair = when (ddcConfig.wallet().algorithm()) {
-        Signature.Algorithm.ED_25519 -> KeyPair.Factory.ed25519.generate(DefaultMnemonic.fromPhrase(ddcConfig.wallet().mnemonic()))
-        Signature.Algorithm.SR_25519 -> KeyPair.Factory.sr25519().generate(DefaultMnemonic.fromPhrase(ddcConfig.wallet().mnemonic()))
+        Signature.Algorithm.ED_25519 -> KeyPair.Factory.ed25519.generate(
+            DefaultMnemonic.fromPhrase(
+                ddcConfig.wallet().mnemonic()
+            )
+        )
+
+        Signature.Algorithm.SR_25519 -> KeyPair.Factory.sr25519()
+            .generate(DefaultMnemonic.fromPhrase(ddcConfig.wallet().mnemonic()))
+
         Signature.Algorithm.UNRECOGNIZED -> throw IllegalArgumentException("Unrecognized signature algorithm")
     }
 
@@ -35,7 +37,7 @@ class Wallet(private val ddcConfig: DdcConfig) {
             .let(AuthToken::parseFrom)
         val payload = Payload.newBuilder()
             .setPrev(botToken)
-            .setExpiresAt(System.currentTimeMillis() + TOKEN_DURATION)
+            .setExpiresAt(System.currentTimeMillis() + ddcConfig.token().duration())
             .setCanDelegate(false)
             .addOperations(Operation.GET)
             .build()
