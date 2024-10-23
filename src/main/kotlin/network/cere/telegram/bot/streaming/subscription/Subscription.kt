@@ -1,24 +1,25 @@
 package network.cere.telegram.bot.streaming.subscription
 
-import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanionBase
-import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import io.quarkus.panache.common.Sort
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanion
+import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntity
 import jakarta.persistence.Entity
-import jakarta.persistence.Id
+import jakarta.persistence.FetchType
+import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import network.cere.telegram.bot.streaming.channel.Channel
 
 @Entity
 @Table(name = "subscriptions")
 @Serializable
 data class Subscription(
-    @Id
-    val id: Int,
+    @Transient
+    @ManyToOne(fetch = FetchType.LAZY)
+    var channel: Channel? = null,
     val durationInDays: Int,
-    val description: String,
-    val price: Float,
-) : PanacheEntityBase {
-    companion object : PanacheCompanionBase<Subscription, Int> {
-        fun list() = listAll(Sort.by("id", Sort.Direction.Ascending))
-    }
+    var description: String,
+    var price: Float,
+) : PanacheEntity() {
+    companion object : PanacheCompanion<Subscription>
 }

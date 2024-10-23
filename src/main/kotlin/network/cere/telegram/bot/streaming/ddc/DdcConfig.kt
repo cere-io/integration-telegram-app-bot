@@ -5,11 +5,16 @@ import network.cere.ddc.Signature
 
 @ConfigMapping(prefix = "ddc")
 interface DdcConfig {
-    fun bucket(): Long
     fun wallet(): Wallet
 
     interface Wallet {
         fun mnemonic(): String
         fun algorithm(): Signature.Algorithm
+    }
+
+    fun token(): Token
+
+    interface Token {
+        fun duration(): Long
     }
 }
