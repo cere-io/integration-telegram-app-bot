@@ -7,29 +7,31 @@ val replyKeyboardMarkup = InlineKeyboardMarkup(
     inline_keyboard = listOf(
         listOf(
             InlineKeyboardButton(
-                text = "Configure subscriptions",
+                text = "\uD83D\uDCC4 Configure subscriptions",
                 callback_data = "/configureSubscriptions"
             )
         ),
         listOf(
             InlineKeyboardButton(
-                text = "Set Bot Access Token",
+                text = "\u2699\uFE0F Set Bot Access token",
                 callback_data = "/setToken"
             ),
+        ),
+        listOf(
             InlineKeyboardButton(
-                text = "Set payouts address",
+                text = "\uD83D\uDCB3 Set payouts address",
                 callback_data = "/setPayoutsAddress"
             ),
         ),
         listOf(
             InlineKeyboardButton(
-                text = "Add video",
+                text = "\uD83C\uDF9E Add video",
                 callback_data = "/addVideo"
             ),
         ),
         listOf(
             InlineKeyboardButton(
-                text = "Check configuration",
+                text = "\uD83D\uDD0D Check configuration",
                 callback_data = "/check"
             ),
         )
