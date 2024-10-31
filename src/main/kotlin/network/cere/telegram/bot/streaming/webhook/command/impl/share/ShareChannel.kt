@@ -17,6 +17,7 @@ import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
+import java.time.LocalDateTime
 
 @ApplicationScoped
 class ShareChannel(
@@ -52,7 +53,9 @@ class ShareChannel(
                 val channel = Channel.findById(sharedChatId.longValue) ?: Channel(
                     id = sharedChatId.longValue,
                     config = ChannelConfig(),
-                    title = requireNotNull(sharedChat.result?.jsonObject?.getValue("title").toString())
+                    username = requireNotNull(sharedChat.result?.jsonObject?.getValue("username")?.jsonPrimitive?.content),
+                    title = requireNotNull(sharedChat.result?.jsonObject?.getValue("title")?.jsonPrimitive?.content),
+                    connectedAt = LocalDateTime.now()
                 ).also {
                     it.persistAndFlush()
                 }
