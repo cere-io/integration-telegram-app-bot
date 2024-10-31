@@ -72,6 +72,7 @@ class SubscriptionsResource(@RestClient private val tonApi: TonApi) {
                     UserSubscription(
                         id = UserSubscriptionKey(bounceableAddress, channel.id),
                         subscription = matchedSubscription,
+                        subscribedAt = LocalDateTime.now(),
                         expiresAt = LocalDateTime.now().plusDays(matchedSubscription.durationInDays.toLong())
                     ).persistAndFlush()
                     txFound = true

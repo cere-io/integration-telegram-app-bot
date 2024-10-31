@@ -17,6 +17,8 @@ data class UserSubscription(
     @OneToOne(targetEntity = Subscription::class, optional = false)
     val subscription: Subscription,
 
+    val subscribedAt: LocalDateTime,
+
     val expiresAt: LocalDateTime,
 ) : PanacheEntityBase {
     companion object : PanacheCompanionBase<UserSubscription, UserSubscriptionKey> {

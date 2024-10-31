@@ -2,9 +2,16 @@ package network.cere.telegram.bot.streaming.channel
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanionBase
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
-import jakarta.persistence.*
+import jakarta.persistence.CascadeType
+import jakarta.persistence.Embedded
+import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
+import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
+import jakarta.persistence.Table
 import network.cere.telegram.bot.streaming.subscription.Subscription
 import network.cere.telegram.bot.streaming.video.Video
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "connected_channels")
@@ -12,10 +19,14 @@ data class Channel(
     @Id
     val id: Long,
 
-    @Embedded
-    val config: ChannelConfig = ChannelConfig(),
+    val username: String,
 
     val title: String,
+
+    val connectedAt: LocalDateTime,
+
+    @Embedded
+    val config: ChannelConfig = ChannelConfig(),
 
     @OneToMany(
         cascade = [CascadeType.ALL],
