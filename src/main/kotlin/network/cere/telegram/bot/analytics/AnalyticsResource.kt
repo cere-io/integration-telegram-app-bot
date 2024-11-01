@@ -3,14 +3,12 @@ package network.cere.telegram.bot.analytics
 import io.smallrye.common.annotation.RunOnVirtualThread
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
-import jakarta.ws.rs.container.ContainerRequestContext
 import kotlinx.serialization.Serializable
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.subscription.UserSubscription
 import network.cere.telegram.bot.streaming.ton.ConnectedWallet
 import org.jboss.resteasy.reactive.RestQuery
 import org.jboss.resteasy.reactive.RestResponse
-import org.jboss.resteasy.reactive.server.ServerRequestFilter
 import java.time.LocalDateTime
 
 @Path("analytics")
