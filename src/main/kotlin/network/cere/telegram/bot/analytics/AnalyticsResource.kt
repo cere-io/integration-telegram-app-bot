@@ -22,7 +22,7 @@ class AnalyticsResource {
         @RestQuery to: LocalDateTime,
         @RestQuery channelUsername: String?
     ): RestResponse<List<SubscriptionShort>> {
-        val subscriptions = if (channelUsername == null)
+        val subscriptions = if (channelUsername.isNullOrEmpty())
             UserSubscription.find("subscribedAt between ?1 and ?2", from, to).list()
         else
             UserSubscription.find(
@@ -42,6 +42,16 @@ class AnalyticsResource {
     }
 
     @GET
+    @Path("subscriptions/total")
+    @RunOnVirtualThread
+    fun subscriptionsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Long>> {
+        return if (channelUsername.isNullOrEmpty())
+            RestResponse.ok(Total(UserSubscription.count()))
+        else
+            RestResponse.ok(Total(UserSubscription.count("subscription.channel.username = ?1", channelUsername)))
+    }
+
+    @GET
     @Path("connected_channels")
     @RunOnVirtualThread
     fun connectedChannels(
@@ -54,6 +64,11 @@ class AnalyticsResource {
     }
 
     @GET
+    @Path("connected_channels/total")
+    @RunOnVirtualThread
+    fun connectedChannelsTotal(): RestResponse<Total<Long>> = RestResponse.ok(Total(Channel.count()))
+
+    @GET
     @Path("connected_wallets")
     @RunOnVirtualThread
     fun connectedWallets(
@@ -61,10 +76,11 @@ class AnalyticsResource {
         @RestQuery to: LocalDateTime,
         @RestQuery channelUsername: String?
     ): RestResponse<List<WalletShort>> {
-        val wallets = if (channelUsername == null) {
+        val wallets = if (channelUsername.isNullOrEmpty()) {
             ConnectedWallet.find("connectedAt between ?1 and ?2", from, to).list()
         } else {
-            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
+            val channel =
+                Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok(emptyList())
             ConnectedWallet.find(
                 "id.channelId = ?1 and connectedAt between ?2 and ?3",
                 channel.id,
@@ -77,6 +93,18 @@ class AnalyticsResource {
     }
 
     @GET
+    @Path("connected_wallets/total")
+    @RunOnVirtualThread
+    fun connectedWalletsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Long>> {
+        return if (channelUsername.isNullOrEmpty())
+            RestResponse.ok(Total(ConnectedWallet.count()))
+        else {
+            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok(Total(0))
+            RestResponse.ok(Total(ConnectedWallet.count("id.channelId = ?1", channel.id)))
+        }
+    }
+
+    @GET
     @Path("payments")
     @RunOnVirtualThread
     fun payments(
@@ -86,7 +114,7 @@ class AnalyticsResource {
     ): RestResponse<List<Payment>> {
         val query =
             "select id.channelId, subscription.channel.username, id.address, subscribedAt, subscription.price from UserSubscription where subscribedAt between ?1 and ?2"
-        val payments = if (channelUsername == null)
+        val payments = if (channelUsername.isNullOrEmpty())
             UserSubscription.find(
                 query,
                 from,
@@ -102,13 +130,27 @@ class AnalyticsResource {
 
         return RestResponse.ok(payments)
     }
-}
 
+    @GET
+    @Path("payments/total")
+    @RunOnVirtualThread
+    fun paymentsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Double>> {
+        val query = "select sum(subscription.price) from UserSubscription"
+        return if (channelUsername.isNullOrEmpty())
+            RestResponse.ok(Total(UserSubscription.find(query).project(Double::class.java).firstResult() ?: 0.0))
+        else {
+            RestResponse.ok(
+                Total(UserSubscription.find("$query where subscription.channel.username = ?1", channelUsername)
+                    .project(Double::class.java).firstResult() ?: 0.0)
+            )
+        }
+    }
+}
 
 @Serializable
 data class ChannelShort(
     val id: Long,
-    val username: String,
+    val username: String?,
     val connectedAt: String
 )
 
@@ -142,3 +184,6 @@ data class Payment(
         amount: Float?
     ) : this(channelId!!, channelUsername, address, paidAt.toString(), amount!!)
 }
+
+@Serializable
+data class Total<T>(val total: T)
