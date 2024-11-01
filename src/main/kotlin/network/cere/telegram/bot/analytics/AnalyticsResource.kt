@@ -42,6 +42,16 @@ class AnalyticsResource {
     }
 
     @GET
+    @Path("subscriptions/total")
+    @RunOnVirtualThread
+    fun subscriptionsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
+        return if (channelUsername == null)
+            RestResponse.ok(UserSubscription.count())
+        else
+            RestResponse.ok(UserSubscription.count("subscription.channel.username = ?1", channelUsername))
+    }
+
+    @GET
     @Path("connected_channels")
     @RunOnVirtualThread
     fun connectedChannels(
@@ -52,6 +62,11 @@ class AnalyticsResource {
             Channel.find("connectedAt between ?1 and ?2", from, to).list()
                 .map { ChannelShort(it.id, it.username, it.connectedAt.toString()) })
     }
+
+    @GET
+    @Path("connected_channels/total")
+    @RunOnVirtualThread
+    fun connectedChannelsTotal(): RestResponse<Long> = RestResponse.ok(Channel.count())
 
     @GET
     @Path("connected_wallets")
@@ -74,6 +89,18 @@ class AnalyticsResource {
 
         }
         return RestResponse.ok(wallets.map { WalletShort(it.id.channelId, it.id.address, it.connectedAt.toString()) })
+    }
+
+    @GET
+    @Path("connected_wallets/total")
+    @RunOnVirtualThread
+    fun connectedWalletsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
+        return if (channelUsername == null)
+            RestResponse.ok(ConnectedWallet.count())
+        else {
+            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
+            RestResponse.ok(ConnectedWallet.count("id.channelId = ?1", channel.id))
+        }
     }
 
     @GET
@@ -101,6 +128,18 @@ class AnalyticsResource {
             ).project(Payment::class.java).list()
 
         return RestResponse.ok(payments)
+    }
+
+    @GET
+    @Path("payments/total")
+    @RunOnVirtualThread
+    fun paymentsTotal(@RestQuery channelUsername: String?): RestResponse<Double> {
+        val query = "select sum(subscription.price) from UserSubscription"
+        return if (channelUsername == null)
+            RestResponse.ok(UserSubscription.find(query).project(Double::class.java).firstResult() ?: 0.0)
+        else {
+            RestResponse.ok(UserSubscription.find("$query where subscription.channel.username = ?1", channelUsername).project(Double::class.java).firstResult() ?: 0.0)
+        }
     }
 }
 
