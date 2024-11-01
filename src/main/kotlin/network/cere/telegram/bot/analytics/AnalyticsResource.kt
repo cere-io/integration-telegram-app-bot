@@ -44,11 +44,11 @@ class AnalyticsResource {
     @GET
     @Path("subscriptions/total")
     @RunOnVirtualThread
-    fun subscriptionsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
+    fun subscriptionsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Long>> {
         return if (channelUsername.isNullOrEmpty())
-            RestResponse.ok(UserSubscription.count())
+            RestResponse.ok(Total(UserSubscription.count()))
         else
-            RestResponse.ok(UserSubscription.count("subscription.channel.username = ?1", channelUsername))
+            RestResponse.ok(Total(UserSubscription.count("subscription.channel.username = ?1", channelUsername)))
     }
 
     @GET
@@ -66,7 +66,7 @@ class AnalyticsResource {
     @GET
     @Path("connected_channels/total")
     @RunOnVirtualThread
-    fun connectedChannelsTotal(): RestResponse<Long> = RestResponse.ok(Channel.count())
+    fun connectedChannelsTotal(): RestResponse<Total<Long>> = RestResponse.ok(Total(Channel.count()))
 
     @GET
     @Path("connected_wallets")
@@ -79,7 +79,8 @@ class AnalyticsResource {
         val wallets = if (channelUsername.isNullOrEmpty()) {
             ConnectedWallet.find("connectedAt between ?1 and ?2", from, to).list()
         } else {
-            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
+            val channel =
+                Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok(emptyList())
             ConnectedWallet.find(
                 "id.channelId = ?1 and connectedAt between ?2 and ?3",
                 channel.id,
@@ -94,12 +95,12 @@ class AnalyticsResource {
     @GET
     @Path("connected_wallets/total")
     @RunOnVirtualThread
-    fun connectedWalletsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
+    fun connectedWalletsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Long>> {
         return if (channelUsername.isNullOrEmpty())
-            RestResponse.ok(ConnectedWallet.count())
+            RestResponse.ok(Total(ConnectedWallet.count()))
         else {
-            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
-            RestResponse.ok(ConnectedWallet.count("id.channelId = ?1", channel.id))
+            val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok(Total(0))
+            RestResponse.ok(Total(ConnectedWallet.count("id.channelId = ?1", channel.id)))
         }
     }
 
@@ -133,12 +134,15 @@ class AnalyticsResource {
     @GET
     @Path("payments/total")
     @RunOnVirtualThread
-    fun paymentsTotal(@RestQuery channelUsername: String?): RestResponse<Double> {
+    fun paymentsTotal(@RestQuery channelUsername: String?): RestResponse<Total<Double>> {
         val query = "select sum(subscription.price) from UserSubscription"
         return if (channelUsername.isNullOrEmpty())
-            RestResponse.ok(UserSubscription.find(query).project(Double::class.java).firstResult() ?: 0.0)
+            RestResponse.ok(Total(UserSubscription.find(query).project(Double::class.java).firstResult() ?: 0.0))
         else {
-            RestResponse.ok(UserSubscription.find("$query where subscription.channel.username = ?1", channelUsername).project(Double::class.java).firstResult() ?: 0.0)
+            RestResponse.ok(
+                Total(UserSubscription.find("$query where subscription.channel.username = ?1", channelUsername)
+                    .project(Double::class.java).firstResult() ?: 0.0)
+            )
         }
     }
 }
@@ -180,3 +184,6 @@ data class Payment(
         amount: Float?
     ) : this(channelId!!, channelUsername, address, paidAt.toString(), amount!!)
 }
+
+@Serializable
+data class Total<T>(val total: T)
