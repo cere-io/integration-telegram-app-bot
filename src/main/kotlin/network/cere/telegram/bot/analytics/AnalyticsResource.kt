@@ -22,7 +22,7 @@ class AnalyticsResource {
         @RestQuery to: LocalDateTime,
         @RestQuery channelUsername: String?
     ): RestResponse<List<SubscriptionShort>> {
-        val subscriptions = if (channelUsername == null)
+        val subscriptions = if (channelUsername.isNullOrEmpty())
             UserSubscription.find("subscribedAt between ?1 and ?2", from, to).list()
         else
             UserSubscription.find(
@@ -45,7 +45,7 @@ class AnalyticsResource {
     @Path("subscriptions/total")
     @RunOnVirtualThread
     fun subscriptionsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
-        return if (channelUsername == null)
+        return if (channelUsername.isNullOrEmpty())
             RestResponse.ok(UserSubscription.count())
         else
             RestResponse.ok(UserSubscription.count("subscription.channel.username = ?1", channelUsername))
@@ -76,7 +76,7 @@ class AnalyticsResource {
         @RestQuery to: LocalDateTime,
         @RestQuery channelUsername: String?
     ): RestResponse<List<WalletShort>> {
-        val wallets = if (channelUsername == null) {
+        val wallets = if (channelUsername.isNullOrEmpty()) {
             ConnectedWallet.find("connectedAt between ?1 and ?2", from, to).list()
         } else {
             val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
@@ -95,7 +95,7 @@ class AnalyticsResource {
     @Path("connected_wallets/total")
     @RunOnVirtualThread
     fun connectedWalletsTotal(@RestQuery channelUsername: String?): RestResponse<Long> {
-        return if (channelUsername == null)
+        return if (channelUsername.isNullOrEmpty())
             RestResponse.ok(ConnectedWallet.count())
         else {
             val channel = Channel.find("username = ?1", channelUsername).firstResult() ?: return RestResponse.ok()
@@ -113,7 +113,7 @@ class AnalyticsResource {
     ): RestResponse<List<Payment>> {
         val query =
             "select id.channelId, subscription.channel.username, id.address, subscribedAt, subscription.price from UserSubscription where subscribedAt between ?1 and ?2"
-        val payments = if (channelUsername == null)
+        val payments = if (channelUsername.isNullOrEmpty())
             UserSubscription.find(
                 query,
                 from,
@@ -135,7 +135,7 @@ class AnalyticsResource {
     @RunOnVirtualThread
     fun paymentsTotal(@RestQuery channelUsername: String?): RestResponse<Double> {
         val query = "select sum(subscription.price) from UserSubscription"
-        return if (channelUsername == null)
+        return if (channelUsername.isNullOrEmpty())
             RestResponse.ok(UserSubscription.find(query).project(Double::class.java).firstResult() ?: 0.0)
         else {
             RestResponse.ok(UserSubscription.find("$query where subscription.channel.username = ?1", channelUsername).project(Double::class.java).firstResult() ?: 0.0)
