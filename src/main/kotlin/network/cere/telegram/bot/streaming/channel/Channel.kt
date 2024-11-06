@@ -19,7 +19,7 @@ data class Channel(
     @Id
     val id: Long,
 
-    val username: String,
+    val username: String?,
 
     val title: String,
 
