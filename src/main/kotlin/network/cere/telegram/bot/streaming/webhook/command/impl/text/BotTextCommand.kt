@@ -2,6 +2,7 @@ package network.cere.telegram.bot.streaming.webhook.command.impl.text
 
 import com.github.omarmiatello.telegram.Message
 import com.github.omarmiatello.telegram.Update
+import com.google.common.net.UrlEscapers
 import dev.sublab.base58.base58
 import dev.sublab.hex.hex
 import jakarta.enterprise.context.ApplicationScoped
@@ -150,11 +151,13 @@ class BotTextCommand(
     private fun handleAddVideo(message: Message, user: BotUser, chatContext: ChatContext) {
         when (chatContext.modificationStep) {
             ContextModificationStep.URL -> {
-                val url = URI.create(requireNotNull(message.text))
+                val escapedUrl = UrlEscapers.urlFragmentEscaper().escape(requireNotNull(message.text))
+                val urlNoQuery = URI.create(requireNotNull(escapedUrl))
                     .let { "${it.scheme}://${it.host}${it.path}" }
+
                 val currentChannel = requireNotNull(chatContext.channelId)
                 val channel = requireNotNull(Channel.findById(currentChannel))
-                val video = Video(url = url)
+                val video = Video(url = urlNoQuery)
                 channel.addVideo(video)
                 channel.persistAndFlush()
                 chatContext.entityId = video.id
