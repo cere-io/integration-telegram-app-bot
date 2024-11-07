@@ -27,7 +27,7 @@ class BotCommands(commands: Instance<BotCommand>, private val botTextCommand: Bo
             }
             if (command != null) command.handle(update) else botTextCommand.tryHandle(update)
         }.onFailure {
-            log.error("Unable to handle command {}", update.toJson())
+            log.error("Unable to handle command {}", update.toJson().replace("\n", ""), it)
         }
     }
 }

@@ -53,7 +53,7 @@ class ShareChannel(
                 val channel = Channel.findById(sharedChatId.longValue) ?: Channel(
                     id = sharedChatId.longValue,
                     config = ChannelConfig(),
-                    username = requireNotNull(sharedChat.result?.jsonObject?.getValue("username")?.jsonPrimitive?.content),
+                    username = sharedChat.result?.jsonObject?.get("username")?.jsonPrimitive?.content,
                     title = requireNotNull(sharedChat.result?.jsonObject?.getValue("title")?.jsonPrimitive?.content),
                     connectedAt = LocalDateTime.now()
                 ).also {
