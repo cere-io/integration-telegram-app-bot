@@ -17,6 +17,7 @@ class RegisterWebhook(@RestClient botApi: BotApi, webhookConfig: WebhookConfig) 
             max_connections = webhookConfig.maxConnections().toLong(),
             drop_pending_updates = true,
             secret_token = webhookConfig.token(),
+            allowed_updates = listOf("message", "callback_query", "chat_member")
         )
         botApi.setWebhook(rq)
         log.info("Telegram webhook set")

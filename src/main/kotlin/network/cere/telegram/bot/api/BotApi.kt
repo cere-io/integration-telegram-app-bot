@@ -31,4 +31,8 @@ interface BotApi {
     @POST
     @Path("/getChatAdministrators")
     fun getChatAdministrators(rq: TelegramRequest.GetChatAdministratorsRequest): TelegramResponse<JsonArray>
+
+    @POST
+    @Path("/getChatMemberCount")
+    fun getChatMemberCount(rq: TelegramRequest.GetChatMemberCountRequest): TelegramResponse<Int>
 }

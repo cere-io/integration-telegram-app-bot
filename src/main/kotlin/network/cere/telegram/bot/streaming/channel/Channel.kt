@@ -25,6 +25,8 @@ data class Channel(
 
     val connectedAt: LocalDateTime,
 
+    val memberCount: Long,
+
     @Embedded
     val config: ChannelConfig = ChannelConfig(),
 

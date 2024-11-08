@@ -50,12 +50,14 @@ class ShareChannel(
                 val user = requireNotNull(BotUser.findById(from.id.longValue))
                 user.chatContextJson = json.encodeToString(ChatContext(channelId = sharedChatId.longValue))
                 user.persistAndFlush()
+                val memberCount = botApi.getChatMemberCount(TelegramRequest.GetChatMemberCountRequest(sharedChatId)).result
                 val channel = Channel.findById(sharedChatId.longValue) ?: Channel(
                     id = sharedChatId.longValue,
                     config = ChannelConfig(),
                     username = sharedChat.result?.jsonObject?.get("username")?.jsonPrimitive?.content,
                     title = requireNotNull(sharedChat.result?.jsonObject?.getValue("title")?.jsonPrimitive?.content),
-                    connectedAt = LocalDateTime.now()
+                    connectedAt = LocalDateTime.now(),
+                    memberCount = memberCount?.toLong() ?: -1
                 ).also {
                     it.persistAndFlush()
                 }
