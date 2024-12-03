@@ -9,6 +9,7 @@ import network.cere.telegram.bot.streaming.ddc.Wallet
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import org.eclipse.microprofile.config.inject.ConfigProperty
+import org.slf4j.LoggerFactory
 
 @ApplicationScoped
 class ConnectedChannels(
@@ -17,6 +18,8 @@ class ConnectedChannels(
     private val json: Json,
     private val wallet: Wallet,
 ) : AbstractBotCallbackCommand {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     override fun command() = "/connectedChannels"
 
     override fun handle(update: Update) {
@@ -30,6 +33,7 @@ class ConnectedChannels(
     }
 
     fun connectedChannelsText(user: BotUser): String {
+        log.info("Requested connected channels. User {}", user)
         val channelIds = (user.channels ?: "").split(",").map { it.toLong() }
         val channels = Channel.list("id in ?1", channelIds)
 
