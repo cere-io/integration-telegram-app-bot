@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
+import network.cere.telegram.bot.streaming.campaign.Campaign
 import network.cere.telegram.bot.streaming.quest.Quest
 import network.cere.telegram.bot.streaming.subscription.Subscription
 import network.cere.telegram.bot.streaming.video.Video
@@ -54,6 +55,14 @@ data class Channel(
         fetch = FetchType.LAZY
     )
     val quests: MutableList<Quest> = mutableListOf(),
+
+    @OneToMany(
+        cascade = [CascadeType.ALL],
+        mappedBy = "channel",
+        orphanRemoval = true,
+        fetch = FetchType.LAZY
+    )
+    val campaigns: MutableList<Campaign> = mutableListOf(),
 ) : PanacheEntityBase {
     companion object : PanacheCompanionBase<Channel, Long>
 
@@ -72,6 +81,12 @@ data class Channel(
     fun addQuest(quest: Quest): Channel {
         quests += quest
         quest.channel = this
+        return this
+    }
+
+    fun addCampaign(campaign: Campaign): Channel {
+        campaigns += campaign
+        campaign.channel = this
         return this
     }
 

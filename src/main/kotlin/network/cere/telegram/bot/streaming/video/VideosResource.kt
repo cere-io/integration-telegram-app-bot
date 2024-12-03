@@ -17,8 +17,6 @@ class VideosResource {
     @RunOnVirtualThread
     fun videos(@RestHeader xTelegramChat: Long): RestResponse<List<Video>> {
         val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-        if (!channel.isConfigured()) return RestResponse.notFound()
-
         return RestResponse.ok(channel.videos)
     }
 
@@ -28,7 +26,6 @@ class VideosResource {
     fun saveVideo(@RestHeader xTelegramChat: Long, video: Video): RestResponse<String> {
         if (video.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-            if (!channel.isConfigured()) return RestResponse.notFound()
             channel.addVideo(video)
             channel.persistAndFlush()
         } else {

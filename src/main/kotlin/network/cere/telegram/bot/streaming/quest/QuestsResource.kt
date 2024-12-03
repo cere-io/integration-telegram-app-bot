@@ -17,7 +17,6 @@ class QuestsResource {
     @RunOnVirtualThread
     fun quests(@RestHeader xTelegramChat: Long): RestResponse<List<Quest>> {
         val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-        if (!channel.isConfigured()) return RestResponse.notFound()
 
         return RestResponse.ok(channel.quests)
     }
@@ -28,7 +27,6 @@ class QuestsResource {
     fun saveQuest(@RestHeader xTelegramChat: Long, quest: Quest): RestResponse<String> {
         if (quest.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-            if (!channel.isConfigured()) return RestResponse.notFound()
             channel.addQuest(quest)
             channel.persistAndFlush()
         } else {

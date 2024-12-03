@@ -21,6 +21,9 @@ CREATE TABLE connected_channels
     CONSTRAINT pk_connected_channels PRIMARY KEY (id)
 );
 
+INSERT INTO connected_channels
+(id, title, connectedApp) VALUES (-1002433493900, 'test channel', 'cere');
+
 CREATE TABLE proof_payloads
 (
     payload TEXT NOT NULL,
