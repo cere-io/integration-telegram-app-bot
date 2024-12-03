@@ -23,11 +23,12 @@ class VideosResource {
     @POST
     @RunOnVirtualThread
     @Transactional
-    fun saveVideo(@RestHeader xTelegramChat: Long, video: Video): RestResponse<String> {
+    fun saveVideo(@RestHeader xTelegramChat: Long, video: Video): RestResponse<Video> {
         if (video.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
             channel.addVideo(video)
             channel.persistAndFlush()
+            return RestResponse.ok(video)
         } else {
             val entity = Video.findById(video.id!!) ?: return RestResponse.notFound()
             entity.title = video.title
@@ -35,8 +36,8 @@ class VideosResource {
             entity.thumbnailUrl = video.thumbnailUrl
             entity.url = video.url
             entity.persistAndFlush()
+            return RestResponse.ok(entity)
         }
-        return RestResponse.ok()
     }
 
     @DELETE

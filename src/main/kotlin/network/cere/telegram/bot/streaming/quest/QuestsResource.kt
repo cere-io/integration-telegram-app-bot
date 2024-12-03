@@ -24,11 +24,12 @@ class QuestsResource {
     @POST
     @RunOnVirtualThread
     @Transactional
-    fun saveQuest(@RestHeader xTelegramChat: Long, quest: Quest): RestResponse<String> {
+    fun saveQuest(@RestHeader xTelegramChat: Long, quest: Quest): RestResponse<Quest> {
         if (quest.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
             channel.addQuest(quest)
             channel.persistAndFlush()
+            return RestResponse.ok(quest)
         } else {
             val entity = Quest.findById(quest.id!!) ?: return RestResponse.notFound()
             entity.title = quest.title
@@ -37,8 +38,8 @@ class QuestsResource {
             entity.videoId = quest.videoId
             entity.rewardPoints = quest.rewardPoints
             entity.persistAndFlush()
+            return RestResponse.ok(entity)
         }
-        return RestResponse.ok()
     }
 
     @DELETE

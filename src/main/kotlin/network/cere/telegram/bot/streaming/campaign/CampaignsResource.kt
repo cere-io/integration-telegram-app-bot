@@ -18,14 +18,13 @@ class CampaignsResource {
     @RunOnVirtualThread
     fun campaigns(@RestHeader xTelegramChat: Long): RestResponse<List<Campaign>> {
         val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-
         return RestResponse.ok(channel.campaigns)
     }
 
     @POST
     @RunOnVirtualThread
     @Transactional
-    fun saveCampaign(@RestHeader xTelegramChat: Long, campaign: Campaign): RestResponse<String> {
+    fun saveCampaign(@RestHeader xTelegramChat: Long, campaign: Campaign): RestResponse<Campaign> {
         if (campaign.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
             channel.addCampaign(campaign)
@@ -35,6 +34,7 @@ class CampaignsResource {
             }
 
             channel.persistAndFlush()
+            return RestResponse.ok(campaign)
         } else {
             val entity = Campaign.findById(campaign.id!!) ?: return RestResponse.notFound()
             entity.title = campaign.title
@@ -47,8 +47,8 @@ class CampaignsResource {
             }
 
             entity.persistAndFlush()
+            return RestResponse.ok(entity)
         }
-        return RestResponse.ok()
     }
 
     @DELETE
