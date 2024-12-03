@@ -14,12 +14,3 @@ CREATE TABLE quests
 
 ALTER TABLE quests
     ADD CONSTRAINT FK_QUESTS_ON_CHANNEL FOREIGN KEY (channel_id) REFERENCES connected_channels (id);
-
-/*
-     var id: Long? = null,
-    var title: String,
-    var description: String,
-    var type: String,
-    var videoId: String = "",
-    var rewardPoints: Long,
- */
