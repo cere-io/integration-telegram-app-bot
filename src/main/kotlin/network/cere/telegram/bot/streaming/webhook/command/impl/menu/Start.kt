@@ -31,6 +31,7 @@ class Start(
             isBot = from.is_bot,
             firstName = from.first_name,
             chatContextJson = json.encodeToString(ChatContext()),
+            channels = "",
         ).also { it.persistAndFlush() }
 
         botProducer.sendTextMessage(
