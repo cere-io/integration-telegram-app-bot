@@ -30,7 +30,7 @@ class ConnectedChannels(
     }
 
     fun connectedChannelsText(user: BotUser): String {
-        val channelIds = user.channels.split(",").map { it.toLong() }
+        val channelIds = (user.channels ?: "").split(",").map { it.toLong() }
         val channels = Channel.list("id in ?1", channelIds)
 
         return """

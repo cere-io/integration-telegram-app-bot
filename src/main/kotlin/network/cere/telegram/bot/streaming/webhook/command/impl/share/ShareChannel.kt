@@ -50,7 +50,7 @@ class ShareChannel(
                 if (!isAdmin) return
                 val user = requireNotNull(BotUser.findById(from.id.longValue))
                 user.chatContextJson = json.encodeToString(ChatContext(channelId = sharedChatId.longValue))
-                user.channels = user.channels.split(",").filter{it.isNotEmpty()}.toMutableSet().apply { add(sharedChatId.longValue.toString()) }
+                user.channels = (user.channels ?: "").split(",").filter{it.isNotEmpty()}.toMutableSet().apply { add(sharedChatId.longValue.toString()) }
                     .joinToString(",")
                 user.persistAndFlush()
                 val memberCount =

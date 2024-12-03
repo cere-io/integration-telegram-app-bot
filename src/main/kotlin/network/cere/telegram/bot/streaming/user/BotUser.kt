@@ -14,7 +14,7 @@ data class BotUser(
     val isBot: Boolean,
     val firstName: String,
     var chatContextJson: String,
-    var channels: String = "",
+    var channels: String?,
 ) : PanacheEntityBase {
     companion object : PanacheCompanionBase<BotUser, Long>
 }
