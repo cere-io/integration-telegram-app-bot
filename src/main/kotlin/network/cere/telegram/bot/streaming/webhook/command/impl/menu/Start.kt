@@ -7,6 +7,7 @@ import kotlinx.serialization.json.Json
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.ConnectedChannels
 import network.cere.telegram.bot.streaming.webhook.command.impl.share.ShareChannel
 
 @ApplicationScoped
@@ -14,6 +15,7 @@ class Start(
     private val botProducer: BotProducer,
     private val shareChannel: ShareChannel,
     private val json: Json,
+    private val connectedChannels: ConnectedChannels,
 ) : AbstractBotMenuCommand {
     override fun menuOrder() = 10
 
@@ -22,16 +24,23 @@ class Start(
     override fun command() = "/start"
 
     override fun handle(update: Update) {
+        val chatId = requireNotNull(update.message).chat.id
         val from = requireNotNull(update.message?.from)
-        BotUser.findById(from.id.longValue) ?: BotUser(
+        val user = BotUser.findById(from.id.longValue) ?: BotUser(
             id = from.id.longValue,
             isBot = from.is_bot,
             firstName = from.first_name,
             chatContextJson = json.encodeToString(ChatContext()),
-        ).persistAndFlush()
+        ).also { it.persistAndFlush() }
+
+        botProducer.sendTextMessage(
+            chatId,
+            connectedChannels.connectedChannelsText(user)
+        )
+
         botProducer.sendTextMessage(
             requireNotNull(update.message).chat.id,
-            "Share the channel with bot you want to configure. You must have admin privileges in this channel.",
+            "Connect the channel you want to use. You must have admin privileges in this channel.",
             ReplyKeyboardMarkup(
                 resize_keyboard = true,
                 keyboard = listOf(
