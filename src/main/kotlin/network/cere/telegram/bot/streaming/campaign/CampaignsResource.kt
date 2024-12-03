@@ -29,6 +29,11 @@ class CampaignsResource {
         if (campaign.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
             channel.addCampaign(campaign)
+            if (campaign.quests.size > 0) {
+                val quests = campaign.quests.map {  Quest.findById(it.id!!)!!}
+                campaign.updateQuests(quests)
+            }
+
             channel.persistAndFlush()
         } else {
             val entity = Campaign.findById(campaign.id!!) ?: return RestResponse.notFound()
