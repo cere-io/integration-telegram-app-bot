@@ -11,12 +11,13 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.JoinTable
 import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import network.cere.telegram.bot.serialization.LocalDateTimeSerializer
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.quest.Quest
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "campaigns")
@@ -27,6 +28,12 @@ data class Campaign(
     var id: Long? = null,
     var title: String,
     var description: String,
+
+    @Serializable(with = LocalDateTimeSerializer::class)
+    var startDate: LocalDateTime,
+
+    @Serializable(with = LocalDateTimeSerializer::class)
+    var endDate: LocalDateTime,
 
     @Transient
     @ManyToOne(fetch = FetchType.LAZY)
