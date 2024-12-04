@@ -1,4 +1,4 @@
-package network.cere.telegram.bot.streaming.video
+package network.cere.telegram.bot.streaming.quest
 
 import io.smallrye.common.annotation.RunOnVirtualThread
 import jakarta.transaction.Transactional
@@ -11,30 +11,32 @@ import network.cere.telegram.bot.streaming.channel.Channel
 import org.jboss.resteasy.reactive.RestHeader
 import org.jboss.resteasy.reactive.RestResponse
 
-@Path("videos")
-class VideosResource {
+@Path("quests")
+class QuestsResource {
     @GET
     @RunOnVirtualThread
-    fun videos(@RestHeader xTelegramChat: Long): RestResponse<List<Video>> {
+    fun quests(@RestHeader xTelegramChat: Long): RestResponse<List<Quest>> {
         val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-        return RestResponse.ok(channel.videos)
+
+        return RestResponse.ok(channel.quests)
     }
 
     @POST
     @RunOnVirtualThread
     @Transactional
-    fun saveVideo(@RestHeader xTelegramChat: Long, video: Video): RestResponse<Video> {
-        if (video.id == null) {
+    fun saveQuest(@RestHeader xTelegramChat: Long, quest: Quest): RestResponse<Quest> {
+        if (quest.id == null) {
             val channel = Channel.findById(xTelegramChat) ?: return RestResponse.notFound()
-            channel.addVideo(video)
+            channel.addQuest(quest)
             channel.persistAndFlush()
-            return RestResponse.ok(video)
+            return RestResponse.ok(quest)
         } else {
-            val entity = Video.findById(video.id!!) ?: return RestResponse.notFound()
-            entity.title = video.title
-            entity.description = video.description
-            entity.thumbnailUrl = video.thumbnailUrl
-            entity.url = video.url
+            val entity = Quest.findById(quest.id!!) ?: return RestResponse.notFound()
+            entity.title = quest.title
+            entity.description = quest.description
+            entity.type = quest.type
+            entity.videoId = quest.videoId
+            entity.rewardPoints = quest.rewardPoints
             entity.persistAndFlush()
             return RestResponse.ok(entity)
         }
@@ -44,7 +46,7 @@ class VideosResource {
     @Path("/{id}")
     @RunOnVirtualThread
     @Transactional
-    fun deleteVideo(@RestHeader xTelegramChat: Long, @PathParam("id") id: Long): RestResponse<Boolean> {
-        return RestResponse.ok(Video.deleteById(id))
+    fun deleteQuest(@RestHeader xTelegramChat: Long, @PathParam("id") id: Long): RestResponse<Boolean> {
+        return RestResponse.ok(Quest.deleteById(id))
     }
 }
