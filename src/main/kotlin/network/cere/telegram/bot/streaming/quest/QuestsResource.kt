@@ -35,15 +35,8 @@ class QuestsResource {
             entity.title = quest.title
             entity.description = quest.description
             entity.type = quest.type
-
-            if (quest.type == "video") {
-                entity.videoId = quest.videoId
-                entity.xUrl = ""
-            } else if (quest.type == "post_x") {
-                entity.xUrl = quest.xUrl
-                entity.videoId = ""
-            }
-
+            entity.videoId = quest.videoId
+            entity.url = quest.url
             entity.rewardPoints = quest.rewardPoints
             entity.persistAndFlush()
             return RestResponse.ok(entity)

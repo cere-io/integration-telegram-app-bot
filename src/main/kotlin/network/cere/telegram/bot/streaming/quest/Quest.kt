@@ -23,7 +23,7 @@ data class Quest(
     var description: String,
     var type: String,
     var videoId: String = "",
-    var xUrl: String = "",
+    var url: String = "",
     var rewardPoints: Long,
 
     @Transient
