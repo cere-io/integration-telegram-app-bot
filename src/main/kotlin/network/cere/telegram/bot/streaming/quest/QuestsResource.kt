@@ -36,6 +36,7 @@ class QuestsResource {
             entity.description = quest.description
             entity.type = quest.type
             entity.videoId = quest.videoId
+            entity.url = quest.url
             entity.rewardPoints = quest.rewardPoints
             entity.persistAndFlush()
             return RestResponse.ok(entity)
