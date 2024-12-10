@@ -1,4 +1,4 @@
-package network.cere.telegram.bot.streaming.video
+package network.cere.telegram.bot.streaming.quest
 
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheCompanionBase
 import io.quarkus.hibernate.orm.panache.kotlin.PanacheEntityBase
@@ -13,19 +13,22 @@ import kotlinx.serialization.Transient
 import network.cere.telegram.bot.streaming.channel.Channel
 
 @Entity
-@Table(name = "videos")
+@Table(name = "quests")
 @Serializable
-data class Video(
+data class Quest(
     @Id
     @GeneratedValue
     var id: Long? = null,
+    var title: String,
+    var description: String,
+    var type: String,
+    var videoId: String = "",
+    var url: String = "",
+    var rewardPoints: Long,
+
     @Transient
     @ManyToOne(fetch = FetchType.LAZY)
     var channel: Channel? = null,
-    var url: String,
-    var title: String = "",
-    var description: String = "",
-    var thumbnailUrl: String? = null,
 ) : PanacheEntityBase {
-    companion object : PanacheCompanionBase<Video, Long>
+    companion object : PanacheCompanionBase<Quest, Long>
 }

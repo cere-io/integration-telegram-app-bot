@@ -15,6 +15,7 @@ import network.cere.telegram.bot.streaming.channel.ChannelConfig
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.ConnectedChannels
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import java.time.LocalDateTime
@@ -27,7 +28,7 @@ class ShareChannel(
 ) : AbstractBotShareCommand {
     override fun requestId() = 100L
 
-    override fun command() = "Share channel"
+    override fun command() = "Connect channel"
 
     override fun handle(update: Update) {
         val currentChat = requireNotNull(update.message?.chat?.id)
@@ -49,8 +50,11 @@ class ShareChannel(
                 if (!isAdmin) return
                 val user = requireNotNull(BotUser.findById(from.id.longValue))
                 user.chatContextJson = json.encodeToString(ChatContext(channelId = sharedChatId.longValue))
+                user.channels = (user.channels ?: "").split(",").filter{it.isNotEmpty()}.toMutableSet().apply { add(sharedChatId.longValue.toString()) }
+                    .joinToString(",")
                 user.persistAndFlush()
-                val memberCount = botApi.getChatMemberCount(TelegramRequest.GetChatMemberCountRequest(sharedChatId)).result
+                val memberCount =
+                    botApi.getChatMemberCount(TelegramRequest.GetChatMemberCountRequest(sharedChatId)).result
                 val channel = Channel.findById(sharedChatId.longValue) ?: Channel(
                     id = sharedChatId.longValue,
                     config = ChannelConfig(),
@@ -63,7 +67,7 @@ class ShareChannel(
                 }
                 botProducer.sendTextMessage(
                     currentChat,
-                    "Ok, let's configure channel ${channel.title}",
+                    "Channel ${channel.title} has been successfully connected!",
                     replyKeyboardMarkup
                 )
             }
