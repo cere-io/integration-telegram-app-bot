@@ -1,7 +1,6 @@
 package network.cere.telegram.bot.streaming.webhook.command.impl.text
 
-import com.github.omarmiatello.telegram.Message
-import com.github.omarmiatello.telegram.Update
+import com.github.omarmiatello.telegram.*
 import com.google.common.net.UrlEscapers
 import dev.sublab.base58.base58
 import dev.sublab.hex.hex
@@ -11,8 +10,9 @@ import java.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toKotlinDuration
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.*
 import network.cere.ddc.AuthToken
+import network.cere.telegram.bot.api.BotApi
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.ddc.Wallet
 import network.cere.telegram.bot.streaming.subscription.Subscription
@@ -25,6 +25,7 @@ import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
+import org.slf4j.LoggerFactory
 
 @ApplicationScoped
 class BotTextCommand(
@@ -32,7 +33,10 @@ class BotTextCommand(
         private val botProducer: BotProducer,
         private val wallet: Wallet,
         @RestClient private val tonApi: TonApi,
+        @RestClient private val botApi: BotApi,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
+
     fun tryHandle(update: Update) {
         if (update.message?.text == null) return
 
@@ -47,13 +51,145 @@ class BotTextCommand(
             ContextEntity.PAYOUT_ADDRESS -> handleSetPayoutsAddress(message, user, chatContext)
             ContextEntity.VIDEO -> handleAddVideo(message, user, chatContext)
             ContextEntity.GROUP -> {
-                // Group is handled by ShareGroup command
-                chatContext.entityName = null
-                user.chatContextJson = json.encodeToString(chatContext)
-                user.persistAndFlush()
+                handleSetGroup(message, user, chatContext)
             }
             null -> return
         }
+    }
+
+    private fun handleSetGroup(message: Message, user: BotUser, chatContext: ChatContext) {
+        val input = requireNotNull(message.text)
+
+        // Clean up the input and extract username
+        val username =
+                input.let { text ->
+                    when {
+                        text.contains("t.me/") ->
+                                text.substringAfterLast("/").substringBefore("?").trim()
+                        text.startsWith("@") -> text.substring(1).trim()
+                        else -> text.trim()
+                    }
+                }
+
+        if (username.isEmpty()) {
+            botProducer.sendTextMessage(
+                    message.chat.id,
+                    "Please send either:\n" +
+                            "1. Group username (e.g., 'mygroup' or '@mygroup')\n" +
+                            "2. Group link (e.g., 't.me/mygroup')"
+            )
+            return
+        }
+
+        // Try to get group info and connect it
+        runCatching {
+            val chatId = ChatId("@$username")
+            val chatInfo = botApi.getChat(TelegramRequest.GetChatRequest(chatId))
+            val chatType = chatInfo.result?.jsonObject?.get("type")?.jsonPrimitive?.content
+            if (chatType !in setOf("group", "supergroup")) {
+                botProducer.sendTextMessage(
+                        message.chat.id,
+                        "This link is not for a group. Please send a valid group link."
+                )
+                return
+            }
+
+            val adminsResult =
+                    botApi.getChatAdministrators(
+                                    TelegramRequest.GetChatAdministratorsRequest(
+                                            ChatId("@$username")
+                                    )
+                            )
+                            .result
+                            ?: run {
+                                botProducer.sendTextMessage(
+                                        message.chat.id,
+                                        "Failed to get group administrators. Please try again."
+                                )
+                                return
+                            }
+
+            val isUserAdmin =
+                    adminsResult.asSequence().mapNotNull { it.jsonObject }.any {
+                        it["user"]?.jsonObject?.get("id")?.jsonPrimitive?.long == user.id &&
+                                it["status"]?.jsonPrimitive?.content in
+                                        setOf("administrator", "creator")
+                    }
+
+            val botInfo = botApi.getMe()
+            val botId =
+                    botInfo.result?.id?.longValue
+                            ?: run {
+                                botProducer.sendTextMessage(
+                                        message.chat.id,
+                                        "Failed to get bot information. Please try again."
+                                )
+                                return
+                            }
+
+            val isBotAdmin =
+                    adminsResult.asSequence().mapNotNull { it.jsonObject }.any {
+                        it["user"]?.jsonObject?.get("id")?.jsonPrimitive?.long == botId &&
+                                it["status"]?.jsonPrimitive?.content in
+                                        setOf("administrator", "creator")
+                    }
+
+            if (!isUserAdmin) {
+                botProducer.sendTextMessage(
+                        message.chat.id,
+                        "You must be an administrator of the group."
+                )
+                return
+            }
+
+            if (!isBotAdmin) {
+                botProducer.sendTextMessage(
+                        message.chat.id,
+                        "The bot must be an administrator of the group."
+                )
+                return
+            }
+
+            val currentChannel = requireNotNull(chatContext.channelId)
+            val channel = requireNotNull(Channel.findById(currentChannel))
+
+            // Store the group ID
+            val groupId =
+                    chatInfo.result?.jsonObject?.get("id")?.jsonPrimitive?.long
+                            ?: run {
+                                botProducer.sendTextMessage(
+                                        message.chat.id,
+                                        "Failed to get group information. Please try again."
+                                )
+                                return
+                            }
+            channel.config.connectedGroupId = groupId
+            channel.persistAndFlush()
+
+            // Clear context and show success message
+            chatContext.entityName = null
+            user.chatContextJson = json.encodeToString(chatContext)
+            user.persistAndFlush()
+
+            val groupTitle =
+                    chatInfo.result?.jsonObject?.get("title")?.jsonPrimitive?.content
+                            ?: "Unknown Group"
+            botProducer.sendTextMessage(
+                    message.chat.id,
+                    "Successfully connected group $groupTitle to channel ${channel.title}",
+                    replyKeyboardMarkup
+            )
+        }
+                .onFailure {
+                    log.error("Failed to process group link", it)
+                    botProducer.sendTextMessage(
+                            message.chat.id,
+                            "Failed to connect to the group. Please make sure:\n" +
+                                    "1. The group link is valid\n" +
+                                    "2. The bot is added to the group as an admin\n" +
+                                    "3. You are an admin of the group"
+                    )
+                }
     }
 
     private fun handleAddSubscription(message: Message, user: BotUser, chatContext: ChatContext) {

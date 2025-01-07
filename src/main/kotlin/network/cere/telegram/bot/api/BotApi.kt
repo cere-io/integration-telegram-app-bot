@@ -2,6 +2,7 @@ package network.cere.telegram.bot.api
 
 import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramResponse
+import com.github.omarmiatello.telegram.User
 import com.github.omarmiatello.telegram.WebhookInfo
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -12,17 +13,13 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 
 @RegisterRestClient(configKey = "tg-bot-api")
 interface BotApi {
-    @GET
-    @Path("/getWebhookInfo")
-    fun getWebhookInfo(): TelegramResponse<WebhookInfo>
+    @GET @Path("/getWebhookInfo") fun getWebhookInfo(): TelegramResponse<WebhookInfo>
 
     @POST
     @Path("/setWebhook")
     fun setWebhook(rq: TelegramRequest.SetWebhookRequest): TelegramResponse<Boolean>
 
-    @POST
-    @Path("/sendMessage")
-    fun sendMessage(message: TelegramRequest.SendMessageRequest)
+    @POST @Path("/sendMessage") fun sendMessage(message: TelegramRequest.SendMessageRequest)
 
     @POST
     @Path("/getChat")
@@ -30,9 +27,13 @@ interface BotApi {
 
     @POST
     @Path("/getChatAdministrators")
-    fun getChatAdministrators(rq: TelegramRequest.GetChatAdministratorsRequest): TelegramResponse<JsonArray>
+    fun getChatAdministrators(
+            rq: TelegramRequest.GetChatAdministratorsRequest
+    ): TelegramResponse<JsonArray>
 
     @POST
     @Path("/getChatMemberCount")
     fun getChatMemberCount(rq: TelegramRequest.GetChatMemberCountRequest): TelegramResponse<Int>
+
+    @GET @Path("/getMe") fun getMe(): TelegramResponse<User>
 }

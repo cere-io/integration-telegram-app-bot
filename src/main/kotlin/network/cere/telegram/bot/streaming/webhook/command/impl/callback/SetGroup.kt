@@ -27,62 +27,10 @@ class SetGroup(
 
         botProducer.sendTextMessage(
                 message.chat.id,
-                "Share the group you want to read messages from. You must be an admin in this group.",
-                ReplyKeyboardMarkup(
-                        resize_keyboard = true,
-                        keyboard =
-                                listOf(
-                                        listOf(
-                                                KeyboardButton(
-                                                        text = "Share group",
-                                                        request_chat =
-                                                                KeyboardButtonRequestChat(
-                                                                        request_id =
-                                                                                101L, // Different
-                                                                        // from
-                                                                        // channel
-                                                                        // request ID
-                                                                        chat_is_channel = false,
-                                                                        chat_is_forum = false,
-                                                                        chat_has_username = true,
-                                                                        chat_is_created = true,
-                                                                        bot_is_member = true,
-                                                                        user_administrator_rights =
-                                                                                ChatAdministratorRights(
-                                                                                        is_anonymous =
-                                                                                                false,
-                                                                                        can_manage_chat =
-                                                                                                true,
-                                                                                        can_delete_messages =
-                                                                                                true,
-                                                                                        can_manage_video_chats =
-                                                                                                true,
-                                                                                        can_restrict_members =
-                                                                                                true,
-                                                                                        can_promote_members =
-                                                                                                true,
-                                                                                        can_change_info =
-                                                                                                true,
-                                                                                        can_invite_users =
-                                                                                                true,
-                                                                                        can_post_messages =
-                                                                                                false,
-                                                                                        can_edit_messages =
-                                                                                                false,
-                                                                                        can_pin_messages =
-                                                                                                true,
-                                                                                        can_post_stories =
-                                                                                                false,
-                                                                                        can_edit_stories =
-                                                                                                false,
-                                                                                        can_delete_stories =
-                                                                                                false,
-                                                                                )
-                                                                )
-                                                )
-                                        )
-                                )
-                )
+                "Please send me the group link. Make sure:\n" +
+                        "1. The bot is added to the group as an admin\n" +
+                        "2. You are an admin of the group\n" +
+                        "3. The group has a public link"
         )
     }
 }

@@ -1,0 +1,1 @@
+ALTER TABLE connected_channels ADD COLUMN IF NOT EXISTS connectedGroupId bigint; 
