@@ -6,6 +6,10 @@ import com.google.common.net.UrlEscapers
 import dev.sublab.base58.base58
 import dev.sublab.hex.hex
 import jakarta.enterprise.context.ApplicationScoped
+import java.net.URI
+import java.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toKotlinDuration
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import network.cere.ddc.AuthToken
@@ -21,17 +25,13 @@ import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
 import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
-import java.net.URI
-import java.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.toKotlinDuration
 
 @ApplicationScoped
 class BotTextCommand(
-    private val json: Json,
-    private val botProducer: BotProducer,
-    private val wallet: Wallet,
-    @RestClient private val tonApi: TonApi,
+        private val json: Json,
+        private val botProducer: BotProducer,
+        private val wallet: Wallet,
+        @RestClient private val tonApi: TonApi,
 ) {
     fun tryHandle(update: Update) {
         if (update.message?.text == null) return
@@ -46,6 +46,12 @@ class BotTextCommand(
             ContextEntity.TOKEN -> handleSetToken(message, user, chatContext)
             ContextEntity.PAYOUT_ADDRESS -> handleSetPayoutsAddress(message, user, chatContext)
             ContextEntity.VIDEO -> handleAddVideo(message, user, chatContext)
+            ContextEntity.GROUP -> {
+                // Group is handled by ShareGroup command
+                chatContext.entityName = null
+                user.chatContextJson = json.encodeToString(chatContext)
+                user.persistAndFlush()
+            }
             null -> return
         }
     }
@@ -56,7 +62,8 @@ class BotTextCommand(
                 val duration = requireNotNull(message.text).toInt()
                 val currentChannel = requireNotNull(chatContext.channelId)
                 val channel = requireNotNull(Channel.findById(currentChannel))
-                val subscription = Subscription(durationInDays = duration, description = "", price = 0.01f)
+                val subscription =
+                        Subscription(durationInDays = duration, description = "", price = 0.01f)
                 channel.addSubscription(subscription)
                 channel.persistAndFlush()
                 chatContext.entityId = subscription.id
@@ -67,17 +74,22 @@ class BotTextCommand(
             }
             ContextModificationStep.DESCRIPTION -> {
                 val description = requireNotNull(message.text)
-                val subscription = requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
+                val subscription =
+                        requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
                 subscription.description = description
                 subscription.persistAndFlush()
                 chatContext.modificationStep = ContextModificationStep.PRICE
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
-                botProducer.sendTextMessage(message.chat.id, "Send me the subscription price in TON")
+                botProducer.sendTextMessage(
+                        message.chat.id,
+                        "Send me the subscription price in TON"
+                )
             }
             ContextModificationStep.PRICE -> {
                 val price = requireNotNull(message.text).toFloat()
-                val subscription = requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
+                val subscription =
+                        requireNotNull(Subscription.findById(requireNotNull(chatContext.entityId)))
                 subscription.price = price
                 subscription.persistAndFlush()
                 chatContext.entityName = null
@@ -86,9 +98,9 @@ class BotTextCommand(
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
                 botProducer.sendTextMessage(
-                    message.chat.id,
-                    "Subscription configured",
-                    replyKeyboardMarkup
+                        message.chat.id,
+                        "Subscription configured",
+                        replyKeyboardMarkup
                 )
             }
             else -> return
@@ -112,18 +124,19 @@ class BotTextCommand(
             channel.config.botDdcAccessTokenBase58 = tokenBytes.base58.encode()
             channel.persistAndFlush()
             authToken
-        }.onFailure {
-            botProducer.sendTextMessage(message.chat.id, "Invalid token.")
-        }.onSuccess {
-            val expiresIn = Duration.ofMillis(it.payload.expiresAt - System.currentTimeMillis())
-                .toKotlinDuration()
-                .toString(DurationUnit.DAYS)
-            botProducer.sendTextMessage(
-                message.chat.id,
-                "Access token is configured for channel. Bucket id is ${it.payload.bucketId}, expires in $expiresIn",
-                replyKeyboardMarkup
-            )
         }
+                .onFailure { botProducer.sendTextMessage(message.chat.id, "Invalid token.") }
+                .onSuccess {
+                    val expiresIn =
+                            Duration.ofMillis(it.payload.expiresAt - System.currentTimeMillis())
+                                    .toKotlinDuration()
+                                    .toString(DurationUnit.DAYS)
+                    botProducer.sendTextMessage(
+                            message.chat.id,
+                            "Access token is configured for channel. Bucket id is ${it.payload.bucketId}, expires in $expiresIn",
+                            replyKeyboardMarkup
+                    )
+                }
     }
 
     private fun handleSetPayoutsAddress(message: Message, user: BotUser, chatContext: ChatContext) {
@@ -137,23 +150,26 @@ class BotTextCommand(
             val channel = requireNotNull(Channel.findById(currentChannel))
             channel.config.payoutAddress = bounceableAddress
             channel.persistAndFlush()
-        }.onFailure {
-            botProducer.sendTextMessage(message.chat.id, "Invalid address")
-        }.onSuccess {
-            botProducer.sendTextMessage(
-                message.chat.id,
-                "Payouts address set to $address",
-                replyKeyboardMarkup
-            )
         }
+                .onFailure { botProducer.sendTextMessage(message.chat.id, "Invalid address") }
+                .onSuccess {
+                    botProducer.sendTextMessage(
+                            message.chat.id,
+                            "Payouts address set to $address",
+                            replyKeyboardMarkup
+                    )
+                }
     }
 
     private fun handleAddVideo(message: Message, user: BotUser, chatContext: ChatContext) {
         when (chatContext.modificationStep) {
             ContextModificationStep.URL -> {
-                val escapedUrl = UrlEscapers.urlFragmentEscaper().escape(requireNotNull(message.text))
-                val urlNoQuery = URI.create(requireNotNull(escapedUrl))
-                    .let { "${it.scheme}://${it.host}${it.path}" }
+                val escapedUrl =
+                        UrlEscapers.urlFragmentEscaper().escape(requireNotNull(message.text))
+                val urlNoQuery =
+                        URI.create(requireNotNull(escapedUrl)).let {
+                            "${it.scheme}://${it.host}${it.path}"
+                        }
 
                 val currentChannel = requireNotNull(chatContext.channelId)
                 val channel = requireNotNull(Channel.findById(currentChannel))
@@ -166,7 +182,6 @@ class BotTextCommand(
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video title")
             }
-
             ContextModificationStep.TITLE -> {
                 val title = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
@@ -177,7 +192,6 @@ class BotTextCommand(
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video description")
             }
-
             ContextModificationStep.DESCRIPTION -> {
                 val description = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
@@ -188,7 +202,6 @@ class BotTextCommand(
                 user.persistAndFlush()
                 botProducer.sendTextMessage(message.chat.id, "Send me the video thumbnail URL")
             }
-
             ContextModificationStep.THUMBNAIL -> {
                 val thumbnailUrl = requireNotNull(message.text)
                 val video = requireNotNull(Video.findById(requireNotNull(chatContext.entityId)))
@@ -200,12 +213,11 @@ class BotTextCommand(
                 user.chatContextJson = json.encodeToString(chatContext)
                 user.persistAndFlush()
                 botProducer.sendTextMessage(
-                    message.chat.id,
-                    "Video added to the channel",
-                    replyKeyboardMarkup
+                        message.chat.id,
+                        "Video added to the channel",
+                        replyKeyboardMarkup
                 )
             }
-
             else -> return
         }
     }
