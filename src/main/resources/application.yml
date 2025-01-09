@@ -37,6 +37,26 @@ activity:
   sdk:
     endpoint: 'https://stage-ai-event-service.core-stage.aws.cere.io/event/events'
 
+event:
+  app:
+    id: '${EVENT_APP_ID}'
+  connection:
+    id: '${EVENT_CONNECTION_ID}'
+  session:
+    id: '${EVENT_SESSION_ID}'
+  account:
+    id: '${EVENT_ACCOUNT_ID}'
+  signature: '${EVENT_SIGNATURE}'
+  id: '${EVENT_ID}'
+  type: '${EVENT_TYPE}'
+  timestamp: '${EVENT_TIMESTAMP}'
+  data:
+    service:
+      id: '${EVENT_DATA_SERVICE_ID}'
+  user:
+    pub:
+      key: '${EVENT_USER_PUB_KEY}'
+
 "%dev":
   quarkus:
     rest-client:

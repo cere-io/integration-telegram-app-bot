@@ -27,7 +27,17 @@ interface ActivitySdkClient {
 class GroupMessageHandler(
         private val botProducer: BotProducer,
         @RestClient private val activitySdkClient: ActivitySdkClient,
-        @ConfigProperty(name = "activity.sdk.endpoint") private val activitySdkEndpoint: String
+        @ConfigProperty(name = "activity.sdk.endpoint") private val activitySdkEndpoint: String,
+        @ConfigProperty(name = "event.app.id") private val eventAppId: String,
+        @ConfigProperty(name = "event.connection.id") private val eventConnectionId: String,
+        @ConfigProperty(name = "event.session.id") private val eventSessionId: String,
+        @ConfigProperty(name = "event.account.id") private val eventAccountId: String,
+        @ConfigProperty(name = "event.signature") private val eventSignature: String,
+        @ConfigProperty(name = "event.id") private val eventId: String,
+        @ConfigProperty(name = "event.type") private val eventType: String,
+        @ConfigProperty(name = "event.timestamp") private val eventTimestamp: String,
+        @ConfigProperty(name = "event.data.service.id") private val eventDataServiceId: String,
+        @ConfigProperty(name = "event.user.pub.key") private val eventUserPubKey: String
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -118,24 +128,21 @@ class GroupMessageHandler(
                 }
             }
 
-            // Create the event object with EXACT values from the example
+            // Create the event object with values from environment variables
             val event = buildJsonObject {
                 put("generated", false)
                 put("is_debug", false)
-                put("app_id", "2106")
-                put("connection_id", "7eeea27c-59a5-4b17-b99e-a2c7ec8d7c2f")
-                put("session_id", "41bed7d0-37d8-4817-93bd-9652a8d9f310")
-                put("account_id", "6TRaPXDk6GKrujRjXYviAEBbkuD8ixVUD7QdCaLAUfzv4sXX")
-                put(
-                        "signature",
-                        "0x9e017c49a105ef8976694c2c08f8c4d43f4c78e4eb09a4bc90c2f57ce572d44bf32083684e496e3ede4be69197c14e687a2b7fd45788945e3a1ab0d593188807"
-                )
-                put("id", "ad9b2467-94c4-4407-918c-cc5da18271bc")
-                put("event_type", "GET_LEADERBOARD")
-                put("timestamp", "2025-01-03T15:07:48.168Z")
+                put("app_id", eventAppId)
+                put("connection_id", eventConnectionId)
+                put("session_id", eventSessionId)
+                put("account_id", eventAccountId)
+                put("signature", eventSignature)
+                put("id", eventId)
+                put("event_type", eventType)
+                put("timestamp", eventTimestamp)
                 put("payload", payload)
-                put("data_service_id", "2106")
-                put("user_pub_key", "6TRaPXDk6GKrujRjXYviAEBbkuD8ixVUD7QdCaLAUfzv4sXX")
+                put("data_service_id", eventDataServiceId)
+                put("user_pub_key", eventUserPubKey)
             }
 
             // Send event to Activity SDK and get status message
