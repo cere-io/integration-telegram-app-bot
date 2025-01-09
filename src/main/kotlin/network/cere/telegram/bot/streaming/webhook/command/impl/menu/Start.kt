@@ -70,7 +70,32 @@ class Start(
                                                                                                 true,
                                                                                         can_delete_stories =
                                                                                                 true,
-                                                                                )
+                                                                                ),
+                                                                        bot_administrator_rights =
+                                                                                ChatAdministratorRights(
+                                                                                        is_anonymous =
+                                                                                                false,
+                                                                                        can_manage_chat =
+                                                                                                true,
+                                                                                        can_delete_messages =
+                                                                                                true,
+                                                                                        can_manage_video_chats =
+                                                                                                true,
+                                                                                        can_restrict_members =
+                                                                                                true,
+                                                                                        can_promote_members =
+                                                                                                true,
+                                                                                        can_change_info =
+                                                                                                true,
+                                                                                        can_invite_users =
+                                                                                                true,
+                                                                                        can_post_stories =
+                                                                                                true,
+                                                                                        can_edit_stories =
+                                                                                                true,
+                                                                                        can_delete_stories =
+                                                                                                true,
+                                                                                ),
                                                                 )
                                                 )
                                         )

@@ -59,7 +59,7 @@ class TelegramWebhook(
             )
             log.info("===================")
 
-            commands.tryHandle(update)
+            commands.handle(update)
             return RestResponse.ok()
         } catch (e: Exception) {
             log.error("Failed to process webhook update", e)

@@ -1,34 +1,52 @@
 package network.cere.telegram.bot.streaming.webhook.command
 
-import com.github.omarmiatello.telegram.Update
+import com.github.omarmiatello.telegram.*
 import jakarta.enterprise.context.ApplicationScoped
-import jakarta.enterprise.inject.Instance
+import kotlinx.serialization.json.Json
+import network.cere.telegram.bot.streaming.ddc.Wallet
+import network.cere.telegram.bot.streaming.webhook.BotProducer
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.*
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.SetGroup
 import network.cere.telegram.bot.streaming.webhook.command.impl.channel.ChannelMessageHandler
 import network.cere.telegram.bot.streaming.webhook.command.impl.chat.ChatMemberCommand
-import network.cere.telegram.bot.streaming.webhook.command.impl.share.AbstractBotShareCommand
+import network.cere.telegram.bot.streaming.webhook.command.impl.group.GroupMessageHandler
+import network.cere.telegram.bot.streaming.webhook.command.impl.menu.Start
+import network.cere.telegram.bot.streaming.webhook.command.impl.share.ShareChannel
 import network.cere.telegram.bot.streaming.webhook.command.impl.text.BotTextCommand
+import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.slf4j.LoggerFactory
 
 @ApplicationScoped
 class BotCommands(
-        commands: Instance<BotCommand>,
         private val botTextCommand: BotTextCommand,
+        private val channelMessageHandler: ChannelMessageHandler,
+        private val groupMessageHandler: GroupMessageHandler,
         private val chatMemberCommand: ChatMemberCommand,
-        private val channelMessageHandler: ChannelMessageHandler
+        private val shareChannel: ShareChannel,
+        private val botProducer: BotProducer,
+        private val json: Json,
+        @ConfigProperty(name = "TELEGRAM_BOT_USERNAME") private val botUsername: String,
+        private val wallet: Wallet,
+        private val start: Start,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
-
-    private val commandsMap = commands.associateBy(BotCommand::command)
+    private val commandsMap =
+            mapOf(
+                    "/start" to start,
+                    "Configure subscriptions" to ConfigureSubscriptions(botProducer, json),
+                    "Set Bot Access token" to SetToken(botProducer, json, wallet),
+                    "Set payouts address" to SetPayoutsAddress(botProducer, json),
+                    "Set group" to SetGroup(botProducer, json),
+                    "Add video" to AddVideo(botProducer, json),
+                    "Check configuration" to Check(botUsername, botProducer, json),
+            )
     private val shareCommands =
-            commands.asSequence()
-                    .filter { it is AbstractBotShareCommand }
-                    .map { it as AbstractBotShareCommand }
-                    .associateBy(AbstractBotShareCommand::requestId)
+            mapOf(
+                    shareChannel.requestId() to shareChannel,
+            )
 
-    fun tryHandle(update: Update) {
+    fun handle(update: Update) {
         try {
-            log.debug("Processing update: {}", update.toJson())
-
             // Check message type and handle accordingly
             when (update.message?.chat?.type) {
                 "channel" -> {
@@ -60,6 +78,7 @@ class BotCommands(
                         handleCommand(update)
                     } else {
                         log.info("Message doesn't match processing criteria - privacy mode active")
+                        groupMessageHandler.handle(update)
                     }
                     return
                 }
@@ -80,7 +99,8 @@ class BotCommands(
                     }
                     update.callback_query?.data != null -> {
                         log.debug("Processing callback query: {}", update.callback_query?.data)
-                        commandsMap[requireNotNull(update.callback_query).data]
+                        val data = requireNotNull(update.callback_query).data
+                        commandsMap.entries.find { data == it.value.command() }?.value
                     }
                     update.message?.chat_shared != null -> {
                         log.debug(

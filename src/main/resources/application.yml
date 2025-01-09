@@ -4,6 +4,8 @@ quarkus:
       url: 'https://api.telegram.org/bot${telegram.bot.token}'
     ton-api:
       url: '${ton.api.url}'
+    activity-sdk-api:
+      url: 'https://stage-ai-event-service.core-stage.aws.cere.io'
   kotlin-serialization:
     json:
       encode-defaults: false
@@ -30,6 +32,11 @@ quarkus:
       sql: true
     database:
       generation: 'none'
+
+activity:
+  sdk:
+    endpoint: 'https://stage-ai-event-service.core-stage.aws.cere.io/event/events'
+
 "%dev":
   quarkus:
     rest-client:
@@ -40,6 +47,7 @@ quarkus:
       category:
         "org.jboss.resteasy.reactive.client.logging":
           level: 'DEBUG'
+
 "%prod":
   quarkus:
     hibernate-orm:
