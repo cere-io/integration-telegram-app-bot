@@ -28,6 +28,8 @@ class GroupMessageHandler(
         private val botProducer: BotProducer,
         @RestClient private val activitySdkClient: ActivitySdkClient,
         @ConfigProperty(name = "activity.sdk.endpoint") private val activitySdkEndpoint: String,
+        @ConfigProperty(name = "activity.debug.display-in-telegram")
+        private val displayDebugInTelegram: Boolean,
         @ConfigProperty(name = "event.app.id") private val eventAppId: String,
         @ConfigProperty(name = "event.connection.id") private val eventConnectionId: String,
         @ConfigProperty(name = "event.session.id") private val eventSessionId: String,
@@ -149,34 +151,52 @@ class GroupMessageHandler(
             val statusMessage =
                     try {
                         val response = activitySdkClient.sendEvent(event)
-                        log.info("Activity SDK response: {}", response.status)
                         "✅ Event sent successfully (status: ${response.status})"
                     } catch (e: Exception) {
                         log.error("Failed to send event to Activity SDK", e)
                         "❌ Failed to send event: ${e.message}"
                     }
 
-            // Combine both formats in a single message
-            val combinedMessage =
+            // Always log complete debug information to terminal
+            log.info(
                     """
+                |=== Message Processing Debug Info ===
+                |
+                |Human Readable:
                 |$humanReadableMessage
                 |
-                |
                 |DDC Event:
-                |```
-                |${event.toString()}
-                |```
+                |$event
                 |
                 |Activity SDK Status:
                 |$statusMessage
+                |===================================
             """.trimMargin()
+            )
 
-            // Send the combined message to all users who have this channel in their context
-            BotUser.find("chatContextJson like ?1", "%\"channelId\":${channel.id}%")
-                    .list()
-                    .forEach { user ->
-                        botProducer.sendTextMessage(ChatId(user.id.toString()), combinedMessage)
-                    }
+            // Only send message to Telegram if debug is enabled
+            if (displayDebugInTelegram) {
+                val messageToSend =
+                        """
+                    |$humanReadableMessage
+                    |
+                    |
+                    |DDC Event:
+                    |```
+                    |${event.toString()}
+                    |```
+                    |
+                    |Activity SDK Status:
+                    |$statusMessage
+                    """.trimMargin()
+
+                // Send the message to all users who have this channel in their context
+                BotUser.find("chatContextJson like ?1", "%\"channelId\":${channel.id}%")
+                        .list()
+                        .forEach { user ->
+                            botProducer.sendTextMessage(ChatId(user.id.toString()), messageToSend)
+                        }
+            }
         } catch (e: Exception) {
             log.error("Error processing group message", e)
         }
