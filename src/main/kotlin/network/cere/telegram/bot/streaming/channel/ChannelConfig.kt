@@ -6,5 +6,6 @@ import jakarta.persistence.Embeddable
 data class ChannelConfig(
     var botDdcAccessTokenBase58: String? = null,
     var payoutAddress: String? = null,
-    var connectedApp: String = "cere", //TODO configure from bot apps
+    var connectedApp: String = "cere", // TODO configure from bot apps
+    var connectedGroupId: Long? = null,
 )

@@ -2,6 +2,7 @@ package network.cere.telegram.bot.api
 
 import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramResponse
+import com.github.omarmiatello.telegram.User
 import com.github.omarmiatello.telegram.WebhookInfo
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
@@ -35,4 +36,8 @@ interface BotApi {
     @POST
     @Path("/getChatMemberCount")
     fun getChatMemberCount(rq: TelegramRequest.GetChatMemberCountRequest): TelegramResponse<Int>
+
+    @GET
+    @Path("/getMe")
+    fun getMe(): TelegramResponse<User>
 }

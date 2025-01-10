@@ -8,7 +8,7 @@ import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
-import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
+import network.cere.telegram.bot.streaming.webhook.ReplyKeyboard.replyKeyboardMarkup
 import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
@@ -22,7 +22,8 @@ class Check(
     override fun handle(update: Update) {
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
-        val currentChannel = requireNotNull(json.decodeFromString<ChatContext>(user.chatContextJson).channelId)
+        val currentChannel =
+            requireNotNull(json.decodeFromString<ChatContext>(user.chatContextJson).channelId)
         val channel = requireNotNull(Channel.findById(currentChannel))
         val channelConfig = channel.config
         val reply = StringBuilder("Config for channel ${channel.title}:\n")
@@ -36,17 +37,24 @@ class Check(
         } else {
             reply.append("Payouts address is not configured\n")
         }
+        if (channelConfig.connectedGroupId != null) {
+            reply.append("Group is connected (ID: ${channelConfig.connectedGroupId})\n")
+        } else {
+            reply.append("No group connected\n")
+        }
         if (channel.subscriptions.isEmpty()) {
             reply.append("No subscriptions configured\n")
         }
         reply.append("Number of videos: ${channel.videos.size}\n")
         if (channel.isConfigured()) {
-            reply.append("You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}")
+            reply.append(
+                "You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}",
+            )
         }
         botProducer.sendTextMessage(
             requireNotNull(update.callback_query?.message as Message).chat.id,
             reply.toString(),
-            replyKeyboardMarkup
+            replyKeyboardMarkup,
         )
     }
 }
