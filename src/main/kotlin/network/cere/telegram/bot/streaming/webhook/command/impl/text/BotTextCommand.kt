@@ -25,7 +25,7 @@ import network.cere.telegram.bot.streaming.user.ContextEntity
 import network.cere.telegram.bot.streaming.user.ContextModificationStep
 import network.cere.telegram.bot.streaming.video.Video
 import network.cere.telegram.bot.streaming.webhook.BotProducer
-import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
+import network.cere.telegram.bot.streaming.webhook.ReplyKeyboard.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
 import java.net.URI

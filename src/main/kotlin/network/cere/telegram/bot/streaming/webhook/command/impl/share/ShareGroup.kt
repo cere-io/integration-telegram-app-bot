@@ -12,7 +12,7 @@ import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.user.BotUser
 import network.cere.telegram.bot.streaming.user.ChatContext
 import network.cere.telegram.bot.streaming.webhook.BotProducer
-import network.cere.telegram.bot.streaming.webhook.replyKeyboardMarkup
+import network.cere.telegram.bot.streaming.webhook.ReplyKeyboard.replyKeyboardMarkup
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
 
