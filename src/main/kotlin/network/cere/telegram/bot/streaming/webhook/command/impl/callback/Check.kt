@@ -13,9 +13,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 class Check(
-        @ConfigProperty(name = "telegram.bot.username") private val botUsername: String,
-        private val botProducer: BotProducer,
-        private val json: Json,
+    @ConfigProperty(name = "telegram.bot.username") private val botUsername: String,
+    private val botProducer: BotProducer,
+    private val json: Json,
 ) : AbstractBotCallbackCommand {
     override fun command() = "/check"
 
@@ -23,7 +23,7 @@ class Check(
         val from = requireNotNull(update.callback_query?.from)
         val user = requireNotNull(BotUser.findById(from.id.longValue))
         val currentChannel =
-                requireNotNull(json.decodeFromString<ChatContext>(user.chatContextJson).channelId)
+            requireNotNull(json.decodeFromString<ChatContext>(user.chatContextJson).channelId)
         val channel = requireNotNull(Channel.findById(currentChannel))
         val channelConfig = channel.config
         val reply = StringBuilder("Config for channel ${channel.title}:\n")
@@ -48,13 +48,13 @@ class Check(
         reply.append("Number of videos: ${channel.videos.size}\n")
         if (channel.isConfigured()) {
             reply.append(
-                    "You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}"
+                "You are all set. Share this link in your channel:\nhttps://t.me/$botUsername/${channel.config.connectedApp}?startapp=${channel.id}",
             )
         }
         botProducer.sendTextMessage(
-                requireNotNull(update.callback_query?.message as Message).chat.id,
-                reply.toString(),
-                replyKeyboardMarkup
+            requireNotNull(update.callback_query?.message as Message).chat.id,
+            reply.toString(),
+            replyKeyboardMarkup,
         )
     }
 }

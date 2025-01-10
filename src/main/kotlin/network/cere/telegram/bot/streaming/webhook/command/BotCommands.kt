@@ -1,12 +1,16 @@
 package network.cere.telegram.bot.streaming.webhook.command
 
-import com.github.omarmiatello.telegram.*
+import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.Json
 import network.cere.telegram.bot.streaming.ddc.Wallet
 import network.cere.telegram.bot.streaming.webhook.BotProducer
-import network.cere.telegram.bot.streaming.webhook.command.impl.callback.*
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.AddVideo
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.Check
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.ConfigureSubscriptions
 import network.cere.telegram.bot.streaming.webhook.command.impl.callback.SetGroup
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.SetPayoutsAddress
+import network.cere.telegram.bot.streaming.webhook.command.impl.callback.SetToken
 import network.cere.telegram.bot.streaming.webhook.command.impl.channel.ChannelMessageHandler
 import network.cere.telegram.bot.streaming.webhook.command.impl.chat.ChatMemberCommand
 import network.cere.telegram.bot.streaming.webhook.command.impl.group.GroupMessageHandler
@@ -18,32 +22,32 @@ import org.slf4j.LoggerFactory
 
 @ApplicationScoped
 class BotCommands(
-        private val botTextCommand: BotTextCommand,
-        private val channelMessageHandler: ChannelMessageHandler,
-        private val groupMessageHandler: GroupMessageHandler,
-        private val chatMemberCommand: ChatMemberCommand,
-        private val shareChannel: ShareChannel,
-        private val botProducer: BotProducer,
-        private val json: Json,
-        @ConfigProperty(name = "TELEGRAM_BOT_USERNAME") private val botUsername: String,
-        private val wallet: Wallet,
-        private val start: Start,
+    private val botTextCommand: BotTextCommand,
+    private val channelMessageHandler: ChannelMessageHandler,
+    private val groupMessageHandler: GroupMessageHandler,
+    private val chatMemberCommand: ChatMemberCommand,
+    private val shareChannel: ShareChannel,
+    private val botProducer: BotProducer,
+    private val json: Json,
+    @ConfigProperty(name = "TELEGRAM_BOT_USERNAME") private val botUsername: String,
+    private val wallet: Wallet,
+    private val start: Start,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val commandsMap =
-            mapOf(
-                    "/start" to start,
-                    "Configure subscriptions" to ConfigureSubscriptions(botProducer, json),
-                    "Set Bot Access token" to SetToken(botProducer, json, wallet),
-                    "Set payouts address" to SetPayoutsAddress(botProducer, json),
-                    "Set group" to SetGroup(botProducer, json),
-                    "Add video" to AddVideo(botProducer, json),
-                    "Check configuration" to Check(botUsername, botProducer, json),
-            )
+        mapOf(
+            "/start" to start,
+            "Configure subscriptions" to ConfigureSubscriptions(botProducer, json),
+            "Set Bot Access token" to SetToken(botProducer, json, wallet),
+            "Set payouts address" to SetPayoutsAddress(botProducer, json),
+            "Set group" to SetGroup(botProducer, json),
+            "Add video" to AddVideo(botProducer, json),
+            "Check configuration" to Check(botUsername, botProducer, json),
+        )
     private val shareCommands =
-            mapOf(
-                    shareChannel.requestId() to shareChannel,
-            )
+        mapOf(
+            shareChannel.requestId() to shareChannel,
+        )
 
     fun handle(update: Update) {
         try {
@@ -72,7 +76,7 @@ class BotCommands(
                     // 2. Replies to bot's messages
                     // 3. Messages sent via this bot
                     if (message?.text?.startsWith("/") == true ||
-                                    message?.reply_to_message?.from?.is_bot == true
+                        message?.reply_to_message?.from?.is_bot == true
                     ) {
                         log.info("Processing command or reply to bot message")
                         handleCommand(update)
@@ -92,32 +96,32 @@ class BotCommands(
 
     private fun handleCommand(update: Update) {
         val command =
-                when {
-                    update.message?.text != null -> {
-                        log.debug("Processing text message: {}", update.message?.text)
-                        commandsMap[requireNotNull(update.message).text]
-                    }
-                    update.callback_query?.data != null -> {
-                        log.debug("Processing callback query: {}", update.callback_query?.data)
-                        val data = requireNotNull(update.callback_query).data
-                        commandsMap.entries.find { data == it.value.command() }?.value
-                    }
-                    update.message?.chat_shared != null -> {
-                        log.debug(
-                                "Processing chat share with request_id: {}",
-                                update.message?.chat_shared?.request_id
-                        )
-                        shareCommands[requireNotNull(update.message?.chat_shared).request_id]
-                    }
-                    update.chat_member != null -> {
-                        log.debug("Processing chat member update")
-                        chatMemberCommand
-                    }
-                    else -> {
-                        log.debug("No matching command type found")
-                        null
-                    }
+            when {
+                update.message?.text != null -> {
+                    log.debug("Processing text message: {}", update.message?.text)
+                    commandsMap[requireNotNull(update.message).text]
                 }
+                update.callback_query?.data != null -> {
+                    log.debug("Processing callback query: {}", update.callback_query?.data)
+                    val data = requireNotNull(update.callback_query).data
+                    commandsMap.entries.find { data == it.value.command() }?.value
+                }
+                update.message?.chat_shared != null -> {
+                    log.debug(
+                        "Processing chat share with request_id: {}",
+                        update.message?.chat_shared?.request_id,
+                    )
+                    shareCommands[requireNotNull(update.message?.chat_shared).request_id]
+                }
+                update.chat_member != null -> {
+                    log.debug("Processing chat member update")
+                    chatMemberCommand
+                }
+                else -> {
+                    log.debug("No matching command type found")
+                    null
+                }
+            }
 
         if (command != null) {
             log.debug("Executing command: {}", command.javaClass.simpleName)
