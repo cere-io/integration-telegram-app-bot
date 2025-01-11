@@ -37,7 +37,7 @@ quarkus:
 
 activity:
   sdk:
-    endpoint: 'https://stage-ai-event-service.core-stage.aws.cere.io/event/events'
+    endpoint: 'https://prod-ai-event-service.core.aws.cere.io/event/events'
   debug:
     display-in-telegram: '${DISPLAY_DEBUG_IN_TELEGRAM:false}'
 
