@@ -32,6 +32,8 @@ quarkus:
       sql: true
     database:
       generation: 'none'
+  vertx:
+    max-event-loop-execute-time: 10s
 
 activity:
   sdk:
@@ -75,3 +77,6 @@ event:
     hibernate-orm:
       log:
         sql: false
+    vertx:
+      max-event-loop-execute-time: 10s
+      warning-exception-time: 10s
