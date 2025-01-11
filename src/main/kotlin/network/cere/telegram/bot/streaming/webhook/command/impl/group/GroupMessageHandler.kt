@@ -178,6 +178,9 @@ class GroupMessageHandler(
                 |DDC Event:
                 |$event
                 |
+                |Activity SDK Endpoint:
+                |$activitySdkEndpoint
+                |
                 |Activity SDK Status:
                 |$statusMessage
                 |===================================
@@ -195,6 +198,9 @@ class GroupMessageHandler(
                     |```
                     |$event
                     |```
+                    |
+                    |Activity SDK Endpoint:
+                    |$activitySdkEndpoint
                     |
                     |Activity SDK Status:
                     |$statusMessage
