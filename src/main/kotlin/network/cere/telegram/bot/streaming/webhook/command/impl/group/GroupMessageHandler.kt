@@ -142,19 +142,21 @@ class GroupMessageHandler(
             // Create the event object with values from environment variables
             val event =
                 buildJsonObject {
-                    put("generated", false)
-                    put("is_debug", false)
                     put("app_id", eventAppId)
                     put("connection_id", eventConnectionId)
                     put("session_id", eventSessionId)
+                    put("is_debug", false)
                     put("account_id", eventAccountId)
+                    put(
+                        "app_pub_key",
+                        "0xbb839890cc4de672a7498be0b0a991987176a52804eaef95159d954f2652ae4f",
+                    )
                     put("signature", eventSignature)
                     put("id", eventId)
                     put("event_type", eventType)
                     put("timestamp", eventTimestamp)
+                    put("generated", false)
                     put("payload", payload)
-                    put("data_service_id", eventDataServiceId)
-                    put("user_pub_key", eventUserPubKey)
                 }
 
             // Send event to Activity SDK and get status message
