@@ -9,10 +9,8 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 import network.cere.telegram.bot.streaming.channel.Channel
 import network.cere.telegram.bot.streaming.user.BotUser
@@ -90,52 +88,40 @@ class GroupMessageHandler(
             // Create the message payload
             val payload =
                 buildJsonObject {
-                    put("message_id", message.message_id.toString())
-                    put("group_id", groupId.toString())
-                    put("group_title", chat.title ?: "Unknown Group")
-                    put(
-                        "message_text",
-                        message.text
-                            ?: message.caption
-                            ?: when {
-                                message.photo != null -> "[Photo]"
-                                message.video != null -> "[Video]"
-                                message.document != null -> "[Document]"
-                                message.sticker != null -> "[Sticker]"
-                                else -> "[Unsupported message type]"
+                    putJsonObject("user") {
+                        put(
+                            "id",
+                            message.from
+                                ?.id
+                                ?.longValue
+                                ?.toString() ?: "unknown",
+                        )
+                        put("username", message.from?.username ?: "unknown")
+                        put("first_name", message.from?.first_name ?: "unknown")
+                        message.from?.last_name?.let { put("last_name", it) }
+                    }
+                    putJsonObject("message") {
+                        put("id", message.message_id.toString())
+                        put(
+                            "timestamp",
+                            message.date.let {
+                                java.time.Instant
+                                    .ofEpochSecond(it.toLong())
+                                    .toString()
                             },
-                    )
-                    put("message_timestamp", message.date.toString())
-                    message.from?.let { from ->
-                        putJsonObject("author") {
-                            put("id", from.id.longValue.toString())
-                            put("username", from.username ?: "unknown")
-                            put("first_name", from.first_name)
-                            put("last_name", from.last_name ?: "")
-                            put("is_bot", from.is_bot)
-                        }
+                        )
+                        put("text", message.text ?: message.caption ?: "[No text content]")
+                        put("chat_type", chat.type)
+                        put("chat_title", chat.title)
+                        put("chat_id", chat.id.longValue.toString())
                     }
-                    message.photo?.let { photos ->
-                        putJsonArray("photos") {
-                            photos.forEach { photo ->
-                                addJsonObject {
-                                    put("file_id", photo.file_id)
-                                    put("file_unique_id", photo.file_unique_id)
-                                    put("width", photo.width.toString())
-                                    put("height", photo.height.toString())
-                                    put("file_size", (photo.file_size ?: 0).toString())
-                                }
-                            }
-                        }
-                    }
-                    message.video?.let { video ->
-                        putJsonObject("video") {
-                            put("file_id", video.file_id)
-                            put("file_unique_id", video.file_unique_id)
-                            put("width", video.width.toString())
-                            put("height", video.height.toString())
-                            put("duration", video.duration.toString())
-                        }
+                    putJsonObject("meta") {
+                        put(
+                            "collected_at",
+                            java.time.Instant
+                                .now()
+                                .toString(),
+                        )
                     }
                 }
 

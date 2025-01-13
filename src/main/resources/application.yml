@@ -5,7 +5,7 @@ quarkus:
     ton-api:
       url: '${ton.api.url}'
     activity-sdk-api:
-      url: 'https://stage-ai-event-service.core-stage.aws.cere.io'
+      url: 'https://prod-ai-event-service.core.aws.cere.io'
   kotlin-serialization:
     json:
       encode-defaults: false
