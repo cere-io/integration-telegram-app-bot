@@ -70,8 +70,8 @@ class GroupMessageHandler(
             // Create the message payload
             val payload =
                 buildJsonObject {
-                    put("message_id", message.message_id.toString())
-                    put("group_id", groupId.toString())
+                    put("message_id", message.message_id.longValue)
+                    put("group_id", groupId)
                     put("group_title", chat.title ?: "Unknown Group")
                     put(
                         "message_text",
@@ -85,7 +85,7 @@ class GroupMessageHandler(
                                 else -> "[Unsupported message type]"
                             },
                     )
-                    put("message_timestamp", message.date.toString())
+                    put("message_timestamp", message.date)
                     message.from?.let { from ->
                         putJsonObject("author") {
                             put("id", from.id.longValue.toString())
