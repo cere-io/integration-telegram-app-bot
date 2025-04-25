@@ -19,10 +19,6 @@ event:
     url: 'https://ai-event.stage.cere.io'
   app:
     id: '${EVENT_APP_ID}'
-  connection:
-    id: '${EVENT_CONNECTION_ID}'
-  session:
-    id: '${EVENT_SESSION_ID}'
   account:
     id: '${EVENT_ACCOUNT_ID}'
   signature: '${EVENT_SIGNATURE}'

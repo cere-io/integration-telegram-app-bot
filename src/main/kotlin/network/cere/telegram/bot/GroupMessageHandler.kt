@@ -12,6 +12,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
+import java.util.*
 
 @RegisterRestClient(configKey = "activity-sdk-api")
 interface ActivitySdkClient {
@@ -25,8 +26,6 @@ interface ActivitySdkClient {
 class GroupMessageHandler(
     @RestClient private val activitySdkClient: ActivitySdkClient,
     @ConfigProperty(name = "event.app.id") private val eventAppId: String,
-    @ConfigProperty(name = "event.connection.id") private val eventConnectionId: String,
-    @ConfigProperty(name = "event.session.id") private val eventSessionId: String,
     @ConfigProperty(name = "event.account.id") private val eventAccountId: String,
     @ConfigProperty(name = "event.signature") private val eventSignature: String,
     @ConfigProperty(name = "event.id") private val eventId: String,
@@ -124,9 +123,9 @@ class GroupMessageHandler(
                     put("generated", false)
                     put("is_debug", false)
                     put("app_id", eventAppId)
-                    put("connection_id", eventConnectionId)
-                    put("session_id", eventSessionId)
-                    put("account_id", eventAccountId)
+                    put("connection_id", UUID.randomUUID().toString())
+                    put("session_id", UUID.randomUUID().toString())
+                    put("account_id", message.from?.username ?: eventAccountId)
                     put("signature", eventSignature)
                     put("id", eventId)
                     put("event_type", eventType)
