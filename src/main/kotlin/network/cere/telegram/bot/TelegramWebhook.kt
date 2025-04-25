@@ -22,7 +22,7 @@ class TelegramWebhook(
         const val AUTH_HEADER_NAME = "X-Telegram-Bot-Api-Secret-Token"
     }
 
-    private val handledTypes = listOf("group", "supergroup")
+    private val handledTypes = setOf("group", "supergroup")
 
     @POST
     @RunOnVirtualThread
