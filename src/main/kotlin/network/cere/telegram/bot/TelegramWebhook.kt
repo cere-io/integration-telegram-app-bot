@@ -1,12 +1,10 @@
-package network.cere.telegram.bot.streaming.webhook
+package network.cere.telegram.bot
 
 import com.github.omarmiatello.telegram.Update
 import io.smallrye.common.annotation.RunOnVirtualThread
-import jakarta.transaction.Transactional
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import kotlinx.serialization.json.JsonElement
-import network.cere.telegram.bot.streaming.webhook.command.BotCommands
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.resteasy.reactive.RestHeader
 import org.jboss.resteasy.reactive.RestResponse
@@ -16,7 +14,7 @@ import org.slf4j.LoggerFactory
 @Path("telegram/webhook")
 class TelegramWebhook(
     @ConfigProperty(name = "telegram.webhook.token") private val authToken: String,
-    private val commands: BotCommands,
+    private val groupMessageHandler: GroupMessageHandler,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
@@ -24,17 +22,14 @@ class TelegramWebhook(
         const val AUTH_HEADER_NAME = "X-Telegram-Bot-Api-Secret-Token"
     }
 
+    private val handledTypes = listOf("group", "supergroup")
+
     @POST
     @RunOnVirtualThread
-    @Transactional
     fun handle(
         @RestHeader(AUTH_HEADER_NAME) auth: String,
         payload: JsonElement,
     ): RestResponse<Unit> {
-        log.info("=== WEBHOOK DEBUG ===")
-        log.info("Received webhook request")
-        log.info("Auth token match: {}", auth == authToken)
-
         if (auth != authToken) {
             log.warn("Unauthorized webhook request - token mismatch")
             return RestResponse.status(UNAUTHORIZED)
@@ -43,27 +38,20 @@ class TelegramWebhook(
         val payloadJson = payload.toString()
         log.info("Webhook payload: {}", payloadJson)
 
-        try {
+        return runCatching {
             val update = Update.fromJson(payloadJson)
-            log.info("Successfully parsed update:")
-            log.info("Update ID: {}", update.update_id)
-            log.info(
-                "Message Type: {}",
-                when {
-                    update.message != null -> "message"
-                    update.edited_message != null -> "edited_message"
-                    update.channel_post != null -> "channel_post"
-                    update.callback_query != null -> "callback_query"
-                    else -> "unknown"
-                },
-            )
-            log.info("===================")
-
-            commands.handle(update)
-            return RestResponse.ok()
-        } catch (e: Exception) {
-            log.error("Failed to process webhook update", e)
-            return RestResponse.serverError()
-        }
+            val type = update.message?.chat?.type
+            if (type in handledTypes) {
+                val message = update.message
+                if (message?.text?.startsWith("/") == true ||
+                    message?.reply_to_message?.from?.is_bot == true
+                ) {
+                    // skip
+                } else {
+                    log.info("Message doesn't match processing criteria - privacy mode active")
+                    groupMessageHandler.handle(update)
+                }
+            }
+        }.fold({ RestResponse.ok() }, { RestResponse.serverError() })
     }
 }

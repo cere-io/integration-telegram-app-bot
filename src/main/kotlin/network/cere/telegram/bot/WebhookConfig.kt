@@ -1,4 +1,4 @@
-package network.cere.telegram.bot.streaming.webhook
+package network.cere.telegram.bot
 
 import io.smallrye.config.ConfigMapping
 

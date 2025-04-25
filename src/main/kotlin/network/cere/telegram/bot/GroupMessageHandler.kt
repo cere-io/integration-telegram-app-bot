@@ -1,6 +1,5 @@
-package network.cere.telegram.bot.streaming.webhook.command.impl.group
+package network.cere.telegram.bot
 
-import com.github.omarmiatello.telegram.ChatId
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.ws.rs.Consumes
@@ -8,15 +7,7 @@ import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.addJsonObject
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
-import kotlinx.serialization.json.putJsonObject
-import network.cere.telegram.bot.streaming.channel.Channel
-import network.cere.telegram.bot.streaming.user.BotUser
-import network.cere.telegram.bot.streaming.webhook.BotProducer
+import kotlinx.serialization.json.*
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 import org.eclipse.microprofile.rest.client.inject.RestClient
@@ -32,11 +23,7 @@ interface ActivitySdkClient {
 
 @ApplicationScoped
 class GroupMessageHandler(
-    private val botProducer: BotProducer,
     @RestClient private val activitySdkClient: ActivitySdkClient,
-    @ConfigProperty(name = "activity.sdk.endpoint") private val activitySdkEndpoint: String,
-    @ConfigProperty(name = "activity.debug.display-in-telegram")
-    private val displayDebugInTelegram: Boolean,
     @ConfigProperty(name = "event.app.id") private val eventAppId: String,
     @ConfigProperty(name = "event.connection.id") private val eventConnectionId: String,
     @ConfigProperty(name = "event.session.id") private val eventSessionId: String,
@@ -55,14 +42,6 @@ class GroupMessageHandler(
             val message = update.message ?: return
             val chat = message.chat
             val groupId = chat.id.longValue
-
-            // Find the channel that has this group connected
-            val channel =
-                Channel.find("config.connectedGroupId = ?1", groupId).firstResult()
-                    ?: run {
-                        log.debug("No channel found for group ID: {}", groupId)
-                        return
-                    }
 
             // Create human-readable message
             val humanReadableMessage =
@@ -183,31 +162,6 @@ class GroupMessageHandler(
                 |===================================
                 """.trimMargin(),
             )
-
-            // Only send message to Telegram if debug is enabled
-            if (displayDebugInTelegram) {
-                val messageToSend =
-                    """
-                    |$humanReadableMessage
-                    |
-                    |
-                    |DDC Event:
-                    |```
-                    |$event
-                    |```
-                    |
-                    |Activity SDK Status:
-                    |$statusMessage
-                    """.trimMargin()
-
-                // Send the message to all users who have this channel in their context
-                BotUser
-                    .find("chatContextJson like ?1", "%\"channelId\":${channel.id}%")
-                    .list()
-                    .forEach { user ->
-                        botProducer.sendTextMessage(ChatId(user.id.toString()), messageToSend)
-                    }
-            }
         } catch (e: Exception) {
             log.error("Error processing group message", e)
         }

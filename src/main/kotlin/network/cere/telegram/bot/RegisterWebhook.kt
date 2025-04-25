@@ -1,8 +1,7 @@
-package network.cere.telegram.bot.streaming.webhook
+package network.cere.telegram.bot
 
 import com.github.omarmiatello.telegram.TelegramRequest
 import io.quarkus.runtime.Startup
-import network.cere.telegram.bot.api.BotApi
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
 
