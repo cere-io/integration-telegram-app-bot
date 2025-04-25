@@ -32,6 +32,9 @@ dependencies {
     implementation("io.quarkus:quarkus-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
+    // Crypto
+    implementation("org.bouncycastle:bcprov-jdk18on")
+
     // Config
     implementation("io.quarkus:quarkus-config-yaml")
 

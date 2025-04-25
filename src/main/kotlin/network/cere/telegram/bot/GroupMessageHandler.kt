@@ -8,10 +8,13 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import kotlinx.serialization.json.*
+import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
+import java.util.*
+import kotlin.random.Random
 
 @RegisterRestClient(configKey = "activity-sdk-api")
 interface ActivitySdkClient {
@@ -25,8 +28,6 @@ interface ActivitySdkClient {
 class GroupMessageHandler(
     @RestClient private val activitySdkClient: ActivitySdkClient,
     @ConfigProperty(name = "event.app.id") private val eventAppId: String,
-    @ConfigProperty(name = "event.connection.id") private val eventConnectionId: String,
-    @ConfigProperty(name = "event.session.id") private val eventSessionId: String,
     @ConfigProperty(name = "event.account.id") private val eventAccountId: String,
     @ConfigProperty(name = "event.signature") private val eventSignature: String,
     @ConfigProperty(name = "event.id") private val eventId: String,
@@ -118,15 +119,22 @@ class GroupMessageHandler(
                     }
                 }
 
+            val accountId = message.from?.id?.longValue?.let { userId ->
+                val sk = ByteArray(32)
+                Random(userId).nextBytes(sk)
+                val pubKey = Ed25519PrivateKeyParameters(sk).generatePublicKey().encoded
+                "0x" + pubKey.joinToString("") { "%02x".format(it) }
+            } ?: eventAccountId
+
             // Create the event object with values from environment variables
             val event =
                 buildJsonObject {
                     put("generated", false)
                     put("is_debug", false)
                     put("app_id", eventAppId)
-                    put("connection_id", eventConnectionId)
-                    put("session_id", eventSessionId)
-                    put("account_id", eventAccountId)
+                    put("connection_id", UUID.randomUUID().toString())
+                    put("session_id", UUID.randomUUID().toString())
+                    put("account_id", accountId)
                     put("signature", eventSignature)
                     put("id", eventId)
                     put("event_type", eventType)
