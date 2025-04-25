@@ -1,17 +1,15 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    kotlin("jvm") version "2.0.10"
-    kotlin("plugin.allopen") version "2.0.10"
-    kotlin("plugin.serialization") version "2.0.10"
-    kotlin("plugin.jpa") version "2.0.10"
+    kotlin("jvm") version "2.0.21"
+    kotlin("plugin.allopen") version "2.0.21"
+    kotlin("plugin.serialization") version "2.0.21"
     id("io.quarkus")
 }
 
 repositories {
     mavenCentral()
     mavenLocal()
-    maven { url = uri("https://repo.repsy.io/mvn/chrynan/public") }
 }
 
 val quarkusPlatformGroupId: String by project
@@ -23,33 +21,16 @@ dependencies {
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
 
     // Telegram
-    implementation("com.github.omarmiatello.telegram:dataclass:7.8")
-
-    // DB
-    implementation("io.quarkus:quarkus-hibernate-orm-panache-kotlin")
-    implementation("io.quarkus:quarkus-jdbc-postgresql")
-    implementation("io.quarkus:quarkus-flyway")
-
-    // Cache
-    implementation("io.quarkus:quarkus-cache")
-
-    // gRPC
-    implementation("io.quarkus:quarkus-grpc")
+    implementation("com.github.omarmiatello.telegram:dataclass-jvm:7.9")
 
     // Web
     implementation("io.quarkus:quarkus-rest-kotlin-serialization")
     implementation("io.quarkus:quarkus-rest-client-kotlin-serialization")
-    implementation("io.quarkus:quarkus-smallrye-openapi")
     implementation("io.quarkus:quarkus-smallrye-health")
 
     // Kotlin
     implementation("io.quarkus:quarkus-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-
-    // Crypto
-    implementation("dev.sublab:encrypting-kotlin:1.0.0")
-    implementation("dev.sublab:hashing-kotlin:1.0.0")
-    implementation("dev.sublab:common-kotlin:1.0.0")
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")
