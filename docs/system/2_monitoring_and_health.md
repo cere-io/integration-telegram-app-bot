@@ -7,18 +7,18 @@ This document outlines the monitoring and health check strategy for the bot, whi
 ```mermaid
 graph TD
     subgraph "External Systems"
-        MONITOR[Monitoring Service<br>(e.g., Prometheus)]
-        ORCHESTRATOR[Container Orchestrator<br>(e.g., Kubernetes, ECS)]
+        MONITOR["Monitoring Service<br>(e.g., Prometheus)"]
+        ORCHESTRATOR["Container Orchestrator<br>(e.g., Kubernetes, ECS)"]
     end
 
     subgraph "Application"
-        HEALTH_CTRL[HealthCheckController]
-        HEALTH_SVC[HealthCheckService]
+        HEALTH_CTRL["HealthCheckController"]
+        HEALTH_SVC["HealthCheckService"]
     end
     
     subgraph "Internal Services"
-        UNIFIED_SDK[UnifiedSdkService]
-        TG_SERVICE[TelegramBotService]
+        UNIFIED_SDK["UnifiedSdkService"]
+        TG_SERVICE["TelegramBotService"]
         CONFIG[ConfigService]
     end
 
