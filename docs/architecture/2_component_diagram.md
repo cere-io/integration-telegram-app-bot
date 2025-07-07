@@ -37,12 +37,12 @@ graph TD
     end
 
     %% Connections
-    WEBHOOK_CONTROLLER -- "1.-Receives-Update" --> VALIDATION
-    VALIDATION -- "2.-Validated-DTO" --> WEBHOOK_CONTROLLER
+    WEBHOOK_CONTROLLER -- "1. Receives-Update" --> VALIDATION
+    VALIDATION -- "2. Validated-DTO" --> WEBHOOK_CONTROLLER
     WEBHOOK_CONTROLLER -- "3. Forwards for Processing" --> MSG_HANDLER
     
-    MSG_HANDLER -- "4-Generates-Account-ID" --> CRYPTO
-    MSG_HANDLER -- "5.-Sends-Event" --> UNIFIED_SDK
+    MSG_HANDLER -- "4 Generates-Account-ID" --> CRYPTO
+    MSG_HANDLER -- "5. Sends-Event" --> UNIFIED_SDK
     
     WEBHOOK_SERVICE -- "Uses" --> TG_BOT_SERVICE
     TG_BOT_SERVICE -- "Uses" --> CONFIG_SERVICE
