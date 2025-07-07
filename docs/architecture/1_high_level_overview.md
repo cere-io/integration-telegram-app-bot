@@ -19,12 +19,12 @@ graph TD
 
     subgraph "DevOps & Monitoring"
         direction LR
-        CI_CD[CI/CD Pipeline<br>(GitHub Actions)]
-        ECR[AWS ECR<br>(Docker Registry)]
-        MONITORING[Monitoring System<br>(e.g., Prometheus, Grafana)]
+        CI_CD["CI/CD Pipeline<br>(GitHub Actions)"]
+        ECR["AWS ECR<br>(Docker Registry)"]
+        MONITORING["Monitoring System<br>(e.g., Prometheus, Grafana)"]
     end
 
-    BOT[integration-telegram-app-bot-ts<br><br><b>Listens for messages, transforms them,<br>and forwards to Cere Network.</b>]
+    BOT["integration-telegram-app-bot-ts<br><br><b>Listens for messages, transforms them,<br>and forwards to Cere Network.</b>"]
 
     TG_USER -- "Sends Message" --> TG_API
     TG_API -- "1. Forwards Update via Webhook" --> BOT
