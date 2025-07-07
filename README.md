@@ -4,8 +4,6 @@
 
 This project is a complete, production-ready TypeScript implementation of the Cere Telegram App Bot, designed to replace the original Kotlin-based bot. It replicates all core functionalities of the original while introducing significant architectural improvements, enhanced security, and a comprehensive testing suite.
 
-A thorough analysis confirms that this TypeScript version is a superior replacement, ready for a seamless swap in production environments.
-
 ### Feature Parity and Enhancement Summary
 
 | Feature | Original Kotlin Bot | New TypeScript Bot | Analysis |
@@ -29,9 +27,43 @@ A thorough analysis confirms that this TypeScript version is a superior replacem
 *   **Unified SDK Integration**: Centralizes all communication with the Cere network through a dedicated service, making the bot's core logic cleaner and more focused.
 *   **Superior Documentation**: The project includes extensive documentation, from a high-level `blueprint.md` to detailed setup and development guides, making it significantly easier to maintain and onboard new developers.
 
-### Conclusion
+## What This Bot Does
 
-The TypeScript bot is not just a port; it is a complete architectural upgrade. It meets and exceeds all functional requirements of the original bot and is **ready for production deployment**.
+### Core Purpose
+
+At its heart, this bot acts as a **data bridge** between the Telegram platform and the Cere Network's backend systems.
+
+Its primary job is to **monitor messages in specific Telegram groups**, transform them into structured, meaningful **events**, and then reliably forward these events to Cere's Activity SDK for processing.
+
+### Key Capabilities and Workflow
+
+Here’s a step-by-step breakdown of what the bot does:
+
+1.  **Listens for Telegram Activity**: The bot is configured to receive real-time updates (via webhooks) from Telegram whenever a message is sent in a group it's a member of.
+
+2.  **Processes Various Message Types**: It's not limited to just text. It understands and processes:
+    *   **Text messages** and their content.
+    *   **Media messages**, noting when a user sends a **photo** or **video**.
+    *   **Edited messages** and channel posts.
+
+3.  **Filters Out Noise**: To ensure only relevant data is captured, the bot intelligently ignores:
+    *   Commands sent to it or other bots (e.g., `/start`).
+    *   Messages that are replies to other bots.
+
+4.  **Generates a Unique User Identity**: This is a critical function. For each Telegram user, the bot uses a deterministic cryptographic function to generate a unique and stable `accountId`. This allows the Cere network to recognize a user's activity over time without ever needing to know their actual Telegram identity, preserving privacy.
+
+5.  **Creates a Structured Event**: It takes the raw, sometimes messy data from a Telegram message and transforms it into a clean, standardized JSON event. This event contains key information like:
+    *   A unique ID for the event.
+    *   The generated `accountId` of the user.
+    *   The group ID and title.
+    *   The message content (or a placeholder like `[Photo]`).
+    *   The timestamp of the message.
+
+6.  **Forwards the Event Reliably**: Using its internal `UnifiedSdkService`, the bot sends this structured event to the Cere Activity SDK. This service ensures that the event is dispatched correctly and includes logic for retries and error handling.
+
+7.  **Serves a Mini App**: The bot can also host a simple web application (a "Mini App") directly within Telegram. This allows users to interact with a web interface without leaving the Telegram app.
+
+8.  **Monitors Its Own Health**: It provides a set of API endpoints (e.g., `/health`, `/ready`) so that production monitoring systems can continuously check if the bot is running correctly and is ready to handle messages.
 
 ## Prerequisites
 
@@ -173,8 +205,3 @@ integration-telegram-app-bot-ts/
 - `npm run test:cov` - Run tests with coverage
 - `npm run lint` - Lint the code
 - `npm run format` - Format the code
-
-## License
-
-MIT
- 
