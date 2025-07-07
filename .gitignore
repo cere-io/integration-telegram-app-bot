@@ -1,41 +1,40 @@
-src/main/webui/
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Gradle
-.gradle/
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Build outputs
+dist/
 build/
 
-# Eclipse
-.project
-.classpath
-.settings/
-bin/
+# Environment variables
+.env
 
-# IntelliJ
-.idea
-*.ipr
-*.iml
-*.iws
-
-# NetBeans
-nb-configuration.xml
-
-# Visual Studio Code
-.vscode
-.factorypath
-
-# OSX
-.DS_Store
-
-# Vim
+# IDE
+.vscode/
+.idea/
 *.swp
 *.swo
 
-# patch
-*.orig
-*.rej
+# OS
+.DS_Store
+Thumbs.db
 
-# Local environment
-.env
+# Logs
+logs
+*.log
 
-# Plugin directory
-/.quarkus/cli/plugins/
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp 

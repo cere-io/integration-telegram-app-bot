@@ -1,29 +1,37 @@
-FROM azul/zulu-openjdk:21 as builder
+FROM node:20-alpine as builder
 
-ARG ROOT_DIR=/app
-ARG ENV_FILE_NAME=local
+WORKDIR /app
 
-COPY --chown=185 . $ROOT_DIR
-WORKDIR $ROOT_DIR
+# Copy package files
+COPY package*.json ./
 
-ENV ENV=$ENV_FILE_NAME
-RUN ./gradlew quarkusBuild
+# Install dependencies
+RUN npm ci && npm cache clean --force
 
-FROM azul/zulu-openjdk:21-jre
+# Copy source code
+COPY . .
 
-ARG ROOT_DIR=/app
-ENV LANG='en_US.UTF-8' LANGUAGE='en_US:en'
+# Build the application
+RUN npm run build
 
-# We make four distinct layers so if there are application changes the library layers can be re-used
-COPY --from=builder $ROOT_DIR/build/quarkus-app/lib/ /deployments/lib/
-COPY --from=builder $ROOT_DIR/build/quarkus-app/*.jar /deployments/
-COPY --from=builder $ROOT_DIR/build/quarkus-app/app/ /deployments/app/
-COPY --from=builder $ROOT_DIR/build/quarkus-app/quarkus/ /deployments/quarkus/
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs &&     adduser -S nestjs -u 1001
+
+# Copy built application
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nestjs:nodejs /app/public ./public
+COPY --from=builder --chown=nestjs:nodejs /app/src/main/resources/META-INF/resources ./src/main/resources/META-INF/resources
+
+USER nestjs
 
 EXPOSE 8080
-USER 185
-ENV AB_JOLOKIA_OFF=""
-ENV JAVA_OPTS="-Dquarkus.http.host=0.0.0.0 -Djava.util.logging.manager=org.jboss.logmanager.LogManager"
-ENV JAVA_APP_JAR="/deployments/quarkus-run.jar"
 
-ENTRYPOINT exec java $JAVA_OPTS -jar $JAVA_APP_JAR
+CMD ["node", "dist/main"]
+
