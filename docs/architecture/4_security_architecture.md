@@ -7,23 +7,23 @@ This document outlines the key security measures and principles applied to the *
 ```mermaid
 graph TD
     subgraph "External Systems"
-        TELEGRAM[Telegram API]
-        USER[End User]
+        TELEGRAM["Telegram API"]
+        USER["End User"]
     end
 
     subgraph "Application Security Layers"
         direction TB
         
-        L1[<b>Layer 1: Transport Layer Security</b><br>TLS 1.2+ for all external communication]
-        L2[<b>Layer 2: Webhook Authentication</b><br>Validates X-Telegram-Bot-Api-Secret-Token header]
-        L3[<b>Layer 3: Input Validation (DTOs)</b><br>class-validator and class-transformer<br>prevents injection and malformed data]
-        L4[<b>Layer 4: Configuration Security</b><br>Securely loads secrets from<br>environment variables via ConfigModule]
-        L5[<b>Layer 5: Container Security</b><br>Runs as non-root user<br>Minimal base image (node:20-alpine)]
-        L6[<b>Layer 6: Cryptographic Security</b><br>Deterministic user ID generation<br>No storage of PII]
+        L1["<b>Layer 1: Transport Layer Security</b><br>TLS 1.2+ for all external communication"]
+        L2["<b>Layer 2: Webhook Authentication</b><br>Validates X-Telegram-Bot-Api-Secret-Token header"]
+        L3["<b>Layer 3: Input Validation (DTOs)</b><br>class-validator and class-transformer<br>prevents injection and malformed data"]
+        L4["<b>Layer 4: Configuration Security</b><br>Securely loads secrets from<br>environment variables via ConfigModule"]
+        L5["<b>Layer 5: Container Security</b><br>Runs as non-root user<br>Minimal base image (node:20-alpine)"]
+        L6["<b>Layer 6: Cryptographic Security</b><br>Deterministic user ID generation<br>No storage of PII"]
     end
 
     subgraph "Backend Systems"
-        CERE_SDK[Cere Activity SDK]
+        CERE_SDK["Cere Activity SDK"]
     end
 
     USER -- "HTTPS" --> TELEGRAM
