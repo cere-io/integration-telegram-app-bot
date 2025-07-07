@@ -1,23 +1,17 @@
+
+
 module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
-  transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
-  },
-  collectCoverageFrom: [
-    '**/*.(t|j)s',
-  ],
-  coverageDirectory: '../coverage',
-  testEnvironment: 'node',
-  testPathIgnorePatterns: [
-    '<rootDir>/unified-sdk/__tests__/',
-    '<rootDir>/unified-sdk/src/__tests__/',
-    '<rootDir>/unified-sdk/dist/',
-  ],
-  modulePathIgnorePatterns: [
-    '<rootDir>/unified-sdk/__tests__/',
-    '<rootDir>/unified-sdk/src/__tests__/',
-    '<rootDir>/unified-sdk/dist/',
-  ],
-}; 
+    moduleFileExtensions: ['js', 'json', 'ts'],
+    rootDir: '.',
+    testRegex: '.*\\.spec\\.ts$',
+    transform: {
+        '^.+\\.(t|j)s$': 'ts-jest',
+    },
+    roots: ['<rootDir>/test'],
+    collectCoverageFrom: ['src/**/*.(t|j)s', '!src/main.ts', '!src/unified-sdk/**'],
+    coverageDirectory: './coverage',
+    testEnvironment: 'node',
+    moduleNameMapper: {
+        '^src/(.*)$': '<rootDir>/src/$1',
+    },
+};

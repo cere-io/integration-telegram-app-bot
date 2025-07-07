@@ -85,7 +85,7 @@ ${statusMessage}
             this.logger.verbose(message)
             break;
         case "error":
-            this.logger.error(`Error Message: ${MessageChannel} \n Error: ${error}`)
+            this.logger.error(`Error Message: ${message} \n Error: ${error}`)
         default:
             this.logger.log(message)
             break;

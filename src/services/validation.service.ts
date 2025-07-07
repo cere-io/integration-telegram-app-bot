@@ -46,8 +46,9 @@ export class ValidationService {
     return (
       message &&
       message.chat &&
-      ['group', 'supergroup'].includes(message.chat.type)
-      // Removed restrictive conditions to process all messages
+      ['group', 'supergroup'].includes(message.chat.type) &&
+      !message.text?.startsWith('/')
     );
   }
-} 
+}
+ 
