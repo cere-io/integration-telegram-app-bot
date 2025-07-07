@@ -16,6 +16,6 @@ jobs:
       runs-on: '["self-hosted", "cere-io-large"]'
       environment: prd
       aws_account_id: ${{ vars.SHARED_AWS_ACCOUNT_ID }}
-      repository: telegram-app-bot
+      repository: integration-telegram-app-bot-ts
       file: ./Dockerfile
     secrets: inherit
