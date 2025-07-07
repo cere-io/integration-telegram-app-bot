@@ -6,24 +6,24 @@ This document illustrates the Continuous Integration and Continuous Deployment (
 
 ```mermaid
 graph TD
-    A[Developer Pushes to Branch] --> B{Trigger GitHub Action};
+    A["Developer Pushes to Branch"] --> B{Trigger GitHub Action};
     
     subgraph "GitHub Actions Workflow (.github/workflows)"
-        B --> C[Checkout Code];
-        C --> D[Setup Node.js 20];
-        D --> E[Install Dependencies (npm ci)];
-        E --> F[Run Lint & Tests (npm test)];
-        F --> G[Build Docker Image (docker build)];
-        G --> H[Push to AWS ECR];
+        B --> C["Checkout Code"];
+        C --> D["Setup Node.js 20"];
+        D --> E["Install Dependencies (npm ci)"];
+        E --> F["Run Lint & Tests (npm test)"];
+        F --> G["Build Docker Image (docker build)"];
+        G --> H["Push to AWS ECR"];
     end
 
     H --> I[ECR Docker Registry];
     I --> J[Deployment to ECS/EKS];
 
     subgraph "Branching Strategy"
-        K[dev branch] --> L[DEV Environment]
-        M[release/* branch] --> N[STAGE Environment]
-        O[master branch] --> P[PROD Environment]
+        K["dev branch"] --> L["DEV Environment"]
+        M["release/* branch"] --> N["STAGE Environment"]
+        O["master branch"] --> P["PROD Environment"]
     end
 
     A -- "dev" --> K
