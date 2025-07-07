@@ -8,13 +8,13 @@ This document provides a C4-style container diagram that illustrates the deploym
 graph TD
     subgraph "Internet"
         direction LR
-        TELEGRAM_API[Telegram API]
-        MONITORING[Monitoring Service<br>(e.g., Prometheus)]
+        TELEGRAM_API["Telegram API"]
+        MONITORING["Monitoring Service<br>(e.g., Prometheus)"]
     end
 
     subgraph "AWS VPC"
         direction TB
-        LB[Load Balancer]
+        LB["Load Balancer"]
 
         subgraph "ECS / EKS Cluster"
             direction LR
@@ -33,7 +33,7 @@ graph TD
     end
 
     subgraph "Cere Network"
-        CERE_SDK[Cere Activity SDK API]
+        CERE_SDK["Cere Activity SDK API"]
     end
 
     TELEGRAM_API -- "Webhook POST" --> LB
