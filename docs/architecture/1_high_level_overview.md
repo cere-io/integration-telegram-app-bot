@@ -27,11 +27,11 @@ graph TD
     BOT["integration-telegram-app-bot-ts<br><br><b>Listens for messages, transforms them,<br>and forwards to Cere Network.</b>"]
 
     TG_USER --> TG_API["Sends Message"]
-    TG_API -- "1. Forwards Update via Webhook" --> BOT
-    BOT -- "2. Registers Webhook" --> TG_API
-    BOT -- "3. Forwards Structured Event" --> CERE_SDK
-    BOT -- "5. Exposes Health & Metrics" --> MONITORING
-    CI_CD -- "4. Builds & Pushes Image" --> ECR
+    TG_API -- "1.-Forwards-Update-via-Webhook" --> BOT
+    BOT -- "2.-Registers-Webhook" --> TG_API
+    BOT -- "3.-Forwards-Structured-Event" --> CERE_SDK
+    BOT -- "5.-Exposes-Health&Metrics" --> MONITORING
+    CI_CD -- "4.-Builds&Pushes-Image" --> ECR
 
     style BOT fill:#D5E8D4,stroke:#82B366,stroke-width:2px
     style CERE_SDK fill:#DAE8FC,stroke:#6C8EBF,stroke-width:2px
