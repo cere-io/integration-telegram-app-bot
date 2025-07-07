@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-// Import crypto for fallback implementation
-import * as crypto from 'crypto';
+import { ed25519 } from '@noble/ed25519';
 
 @Injectable()
 export class CryptoService {
@@ -11,26 +10,12 @@ export class CryptoService {
     const privateKey = seed.slice(0, 32);
     
     try {
-      // Try dynamic import for ES module
-      const ed25519Module = await import('@noble/ed25519').catch(() => null);
-      if (ed25519Module) {
-        const publicKey = await ed25519Module.getPublicKey(privateKey);
-        return '0x' + Buffer.from(publicKey).toString('hex');
-      } else {
-        throw new Error('Failed to import @noble/ed25519');
-      }
+      const publicKey = await ed25519.getPublicKey(privateKey);
+      return '0x' + Buffer.from(publicKey).toString('hex');
     } catch (error) {
-      this.logger.warn(`Ed25519 module error: ${error.message}. Using fallback implementation.`);
-      // Fallback to Node.js crypto module
-      return this.generateAccountIdFallback(privateKey);
+      this.logger.error(`Failed to generate account ID for userId: ${userId}`, error);
+      throw new Error('Cryptographic operation failed. Ensure @noble/ed25519 is installed correctly.');
     }
-  }
-  
-  private generateAccountIdFallback(privateKey: Buffer): string {
-    // Use a deterministic hash as fallback
-    // This is not cryptographically equivalent to Ed25519 but provides a deterministic ID
-    const hash = crypto.createHash('sha256').update(privateKey).digest();
-    return '0x' + hash.toString('hex');
   }
 
   private createDeterministicSeed(userId: number): Buffer {
