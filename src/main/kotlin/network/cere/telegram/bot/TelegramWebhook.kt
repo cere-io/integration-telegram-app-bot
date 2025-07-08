@@ -16,12 +16,11 @@ class TelegramWebhook(
     @ConfigProperty(name = "telegram.webhook.token") private val authToken: String,
     private val groupMessageHandler: GroupMessageHandler,
 ) {
-    private val log = LoggerFactory.getLogger(javaClass)
-
     companion object {
         const val AUTH_HEADER_NAME = "X-Telegram-Bot-Api-Secret-Token"
     }
 
+    private val log = LoggerFactory.getLogger(javaClass)
     private val handledTypes = setOf("group", "supergroup")
 
     @POST
@@ -38,7 +37,7 @@ class TelegramWebhook(
         val payloadJson = payload.toString()
         log.info("Webhook payload: {}", payloadJson)
 
-        return runCatching {
+        runCatching {
             val update = Update.fromJson(payloadJson)
             val type = update.message?.chat?.type
             if (type in handledTypes) {
@@ -52,6 +51,9 @@ class TelegramWebhook(
                     groupMessageHandler.handle(update)
                 }
             }
-        }.fold({ RestResponse.ok() }, { RestResponse.serverError() })
+        }.onFailure { log.error("Error on processing", it) }
+
+
+        return RestResponse.ok()
     }
 }
