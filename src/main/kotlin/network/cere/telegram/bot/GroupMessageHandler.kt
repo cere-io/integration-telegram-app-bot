@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 @ApplicationScoped
 class GroupMessageHandler(
     @RestClient private val computeEngineClient: ComputeEngineClient,
+    @RestClient private val cereWalletClient: CereWalletClient,
     private val config: Config,
     private val signer: Signer,
 ) {
@@ -29,6 +30,7 @@ class GroupMessageHandler(
             log.warn("Unable to identify message author")
             return
         }
+        val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
             payload = EventPayload(
                 orgId = groupConfig.orgId(),
@@ -49,8 +51,8 @@ class GroupMessageHandler(
                     },
             ),
             appId = config.appId(),
-            accountId = "", // TODO
-            userPubKey = "", //TODO
+            accountId = wallet.accountId,
+            userPubKey = wallet.userPubKey,
             dataServicePubKey = signer.publicKey,
         ).sign(signer)
 

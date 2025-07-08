@@ -1,9 +1,15 @@
 quarkus:
+  cache:
+    caffeine:
+      initial-capacity: 1000
+      maximum-size: 10000
   rest-client:
     tg-bot-api:
       url: 'https://api.telegram.org/bot${telegram.bot.token}'
     compute-engine:
       url: '${compute-engine.url}'
+    cere-wallet:
+      url: '${cere-wallet.url}'
   kotlin-serialization:
     json:
       encode-defaults: false

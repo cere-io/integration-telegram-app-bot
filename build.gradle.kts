@@ -28,12 +28,16 @@ dependencies {
     implementation("io.quarkus:quarkus-rest-client-kotlin-serialization")
     implementation("io.quarkus:quarkus-smallrye-health")
 
+    // Cache
+    implementation("io.quarkus:quarkus-cache")
+
     // Kotlin
     implementation("io.quarkus:quarkus-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
     // Crypto
     implementation("org.bouncycastle:bcprov-jdk18on")
+    implementation("org.purejava:tweetnacl-java:1.1.2")
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")
