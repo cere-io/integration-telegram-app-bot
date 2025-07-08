@@ -24,6 +24,17 @@ Fill `.env` with the proper values
 TELEGRAM_BOT_TOKEN=<token from @BotFather>
 TELEGRAM_WEBHOOK_URL=<your tunnel URL>
 TELEGRAM_WEBHOOK_TOKEN=<auth token for your webhook endpoint>
+
+AGENT_SERVICE_APP_ID=<agent service ID from ROB>
+AGENT_SERVICE_PRIVATE_KEY=<agent service private key in HEX format>
+AGENT_SERVICE_GROUP__<YOUR_TEST_GROUP_NAME>__GROUP_ID=<Telegram group id>
+AGENT_SERVICE_GROUP__<YOUR_TEST_GROUP_NAME>__ORG_ID=<organization ID from ROB for this group>
+AGENT_SERVICE_GROUP__<YOUR_TEST_GROUP_NAME>__CAMPAIGN_ID=<campaign ID from ROB for this group>
+
+COMPUTE_ENGINE_URL=<compute engine endpoint>
+
+CERE_WALLET_URL=<Cere Wallet API endpoint>
+CERE_WALLET_TOKEN=<Cere Wallet API S2S token>
 ```
 
 Run your application in dev mode:

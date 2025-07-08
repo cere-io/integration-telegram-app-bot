@@ -28,6 +28,9 @@ dependencies {
     implementation("io.quarkus:quarkus-rest-client-kotlin-serialization")
     implementation("io.quarkus:quarkus-smallrye-health")
 
+    // Cache
+    implementation("io.quarkus:quarkus-cache")
+
     // Kotlin
     implementation("io.quarkus:quarkus-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
