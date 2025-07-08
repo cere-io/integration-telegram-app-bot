@@ -37,7 +37,6 @@ dependencies {
 
     // Crypto
     implementation("org.bouncycastle:bcprov-jdk18on")
-    implementation("org.purejava:tweetnacl-java:1.1.2")
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")

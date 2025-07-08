@@ -1,6 +1,5 @@
 package network.cere.telegram.bot
 
-import io.quarkus.runtime.annotations.RegisterForReflection
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDateTime
@@ -22,15 +21,10 @@ data class Event(
     @SerialName("data_service_pub_key")
     val dataServicePubKey: String,
 
-    val signing: String = byteArrayOf(0x00, 0x01, 0x00).hex(false),
-
-    var signature: String? = null,
+    val signing: String,
 
     @SerialName("event_type")
-    val type: String = "TELEGRAM_MESSAGE",
-
-    @SerialName("app_pub_key")
-    val appPubKey: String = "",
+    val type: String,
 
     @SerialName("connection_id")
     val connectionId: String = UUID.randomUUID().toString(),
@@ -42,7 +36,7 @@ data class Event(
 
     val timestamp: String = LocalDateTime.now().toString(),
 
-    val generated: Boolean = false,
+    var signature: String? = null,
 ) {
     fun sign(signer: Signer): Event {
         val hash = "$id$type$timestamp".hash()

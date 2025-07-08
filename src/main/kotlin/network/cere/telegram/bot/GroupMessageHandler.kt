@@ -12,6 +12,10 @@ class GroupMessageHandler(
     private val config: Config,
     private val signer: Signer,
 ) {
+    private companion object {
+        private const val EVENT_TYPE = "TELEGRAM_MESSAGE"
+    }
+
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
@@ -54,6 +58,8 @@ class GroupMessageHandler(
             accountId = wallet.accountId,
             userPubKey = wallet.userPubKey,
             dataServicePubKey = signer.publicKey,
+            signing  = byteArrayOf(0x00, 0x01, 0x00).hex(false),
+            type = EVENT_TYPE,
         ).sign(signer)
 
         runCatching {

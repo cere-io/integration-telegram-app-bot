@@ -8,7 +8,7 @@ interface Config {
 
     fun groups(): Map<String, Group>
 
-    fun seed(): String
+    fun privateKey(): String
 
     interface Group {
         fun groupId(): Long

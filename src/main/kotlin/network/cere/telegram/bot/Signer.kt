@@ -6,7 +6,7 @@ import org.bouncycastle.math.ec.rfc8032.Ed25519.Algorithm
 
 @ApplicationScoped
 class Signer(config: Config) {
-    private val signer = config.seed()
+    private val signer = config.privateKey()
         .substringAfter('x')
         .decodeHex()
         .let(::Ed25519PrivateKeyParameters)
