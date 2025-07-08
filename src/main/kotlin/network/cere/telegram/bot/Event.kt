@@ -2,7 +2,7 @@ package network.cere.telegram.bot
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.time.LocalDateTime
+import java.time.Instant
 import java.util.*
 
 @Serializable
@@ -34,7 +34,7 @@ data class Event(
 
     val id: String = UUID.randomUUID().toString(),
 
-    val timestamp: String = LocalDateTime.now().toString(),
+    val timestamp: String = Instant.now().toString(),
 
     var signature: String? = null,
 ) {
