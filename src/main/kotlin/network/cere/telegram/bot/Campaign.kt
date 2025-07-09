@@ -46,7 +46,19 @@ data class Campaign(
     }
     
     fun isActive(): Boolean {
-        return status == 1 && archive == 0
+        if (status != 1 || archive != 0) {
+            return false
+        }
+        
+        return try {
+            val now = Instant.now()
+            val start = Instant.parse(startDate)
+            val end = Instant.parse(endDate)
+            now.isAfter(start) && now.isBefore(end)
+        } catch (e: Exception) {
+            // If date parsing fails, fall back to status/archive check
+            status == 1 && archive == 0
+        }
     }
     
     fun getDescription(): String {
@@ -73,6 +85,35 @@ data class Campaign(
             "${start.format(formatter)} - ${end.format(formatter)}"
         } catch (e: Exception) {
             "Date range not available"
+        }
+    }
+    
+    fun getStatusText(): String {
+        return when {
+            isActive() -> "Active"
+            isEnded() -> "Ended"
+            isUpcoming() -> "Upcoming"
+            else -> "Inactive"
+        }
+    }
+    
+    fun isEnded(): Boolean {
+        return try {
+            val now = Instant.now()
+            val end = Instant.parse(endDate)
+            now.isAfter(end)
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    fun isUpcoming(): Boolean {
+        return try {
+            val now = Instant.now()
+            val start = Instant.parse(startDate)
+            now.isBefore(start) && status == 1 && archive == 0
+        } catch (e: Exception) {
+            false
         }
     }
 }

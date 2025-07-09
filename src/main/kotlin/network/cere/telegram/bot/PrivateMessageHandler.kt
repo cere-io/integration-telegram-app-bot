@@ -6,7 +6,6 @@ import com.github.omarmiatello.telegram.ChatId
 import com.github.omarmiatello.telegram.ParseMode
 import com.github.omarmiatello.telegram.InlineKeyboardMarkup
 import com.github.omarmiatello.telegram.InlineKeyboardButton
-import com.github.omarmiatello.telegram.WebAppInfo
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
@@ -67,12 +66,36 @@ class PrivateMessageHandler(
             organizationId = organizationId
         )
         
-        val activeCampaigns = campaignsResponse.data.filter { it.isActive() }
+        val allCampaigns = campaignsResponse.data
+        val activeCampaigns = allCampaigns.filter { it.isActive() }
+        
+        if (allCampaigns.isEmpty()) {
+            sendNoCampaignsMessage(chatId)
+            return
+        }
+        
+        // Sort campaigns: active first, then by end date (most recent first)
+        val sortedCampaigns = allCampaigns.sortedWith(compareBy<Campaign> { !it.isActive() }
+            .thenByDescending { campaign ->
+                try {
+                    java.time.Instant.parse(campaign.endDate)
+                } catch (e: Exception) {
+                    java.time.Instant.MIN
+                }
+            })
         
         when (activeCampaigns.size) {
-            0 -> sendNoCampaignsMessage(chatId)
-            1 -> sendCampaignDetails(chatId, activeCampaigns.first())
-            else -> sendCampaignSelection(chatId, activeCampaigns)
+            0 -> sendAllCampaignsSelection(chatId, sortedCampaigns, hasActiveCampaigns = false)
+            1 -> {
+                if (sortedCampaigns.size == 1) {
+                    // Only one campaign total, show details
+                    sendCampaignDetails(chatId, activeCampaigns.first())
+                } else {
+                    // Multiple campaigns but only one active, show all with selection
+                    sendAllCampaignsSelection(chatId, sortedCampaigns, hasActiveCampaigns = true)
+                }
+            }
+            else -> sendAllCampaignsSelection(chatId, sortedCampaigns, hasActiveCampaigns = true)
         }
     }
     
@@ -145,7 +168,7 @@ class PrivateMessageHandler(
             val buttonText = "🎯 $name"
             InlineKeyboardButton(
                 text = buttonText,
-                web_app = WebAppInfo(url = "https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}")
+                url = "https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}"
             )
         }
         
@@ -159,6 +182,56 @@ class PrivateMessageHandler(
         )
         
         sendMessageSafely(request, "campaign selection with ${campaigns.size} campaigns")
+    }
+    
+    private fun sendAllCampaignsSelection(chatId: Long, campaigns: List<Campaign>, hasActiveCampaigns: Boolean) {
+        val header = if (hasActiveCampaigns) {
+            "🎯 **Choose a Campaign**\n\nSelect which campaign you'd like to participate in:"
+        } else {
+            "📋 **All Campaigns**\n\nNo active campaigns, but you can view results from past campaigns:"
+        }
+        
+        val campaignList = campaigns.mapIndexed { index, campaign ->
+            val details = campaign.parseCampaignDetails()
+            val name = details?.name ?: campaign.campaignName ?: "Campaign ${campaign.campaignId}"
+            val statusIcon = when {
+                campaign.isActive() -> "🟢"
+                campaign.isEnded() -> "🔴"
+                campaign.isUpcoming() -> "🟡"
+                else -> "⚫"
+            }
+            val statusText = campaign.getStatusText()
+            "${index + 1}. $statusIcon $name ($statusText)"
+        }.joinToString("\n")
+        
+        val fullMessage = "$header\n\n$campaignList\n\nTap a campaign button below to get started:"
+        
+        val buttons = campaigns.map { campaign ->
+            val details = campaign.parseCampaignDetails()
+            val name = details?.name ?: campaign.campaignName ?: "Campaign ${campaign.campaignId}"
+            val statusIcon = when {
+                campaign.isActive() -> "🚀"
+                campaign.isEnded() -> "📊"
+                campaign.isUpcoming() -> "⏰"
+                else -> "🔒"
+            }
+            val buttonText = "$statusIcon $name"
+            InlineKeyboardButton(
+                text = buttonText,
+                url = "https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}"
+            )
+        }
+        
+        val keyboard = InlineKeyboardMarkup(inline_keyboard = buttons.chunked(1))
+        
+        val request = TelegramRequest.SendMessageRequest(
+            chat_id = ChatId(chatId.toString()),
+            text = fullMessage,
+            parse_mode = ParseMode.Markdown,
+            reply_markup = keyboard
+        )
+        
+        sendMessageSafely(request, "all campaigns selection with ${campaigns.size} campaigns")
     }
     
     private fun sendWelcomeMessage(chatId: Long) {
