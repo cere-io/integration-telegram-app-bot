@@ -11,4 +11,8 @@ interface BotApi {
     @POST
     @Path("/setWebhook")
     fun setWebhook(rq: TelegramRequest.SetWebhookRequest): TelegramResponse<Boolean>
+    
+    @POST
+    @Path("/sendMessage")
+    fun sendMessage(rq: TelegramRequest.SendMessageRequest): TelegramResponse<com.github.omarmiatello.telegram.Message>
 }

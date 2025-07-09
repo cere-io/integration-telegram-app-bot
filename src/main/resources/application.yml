@@ -10,6 +10,8 @@ quarkus:
       url: '${compute-engine.url}'
     cere-wallet:
       url: '${cere-wallet.url}'
+    rob-api:
+      url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
   kotlin-serialization:
     json:
       encode-defaults: false
