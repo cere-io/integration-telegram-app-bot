@@ -4,6 +4,9 @@ import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.Update
 import com.github.omarmiatello.telegram.ChatId
 import com.github.omarmiatello.telegram.ParseMode
+import com.github.omarmiatello.telegram.InlineKeyboardMarkup
+import com.github.omarmiatello.telegram.InlineKeyboardButton
+import com.github.omarmiatello.telegram.WebAppInfo
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
@@ -109,14 +112,13 @@ class PrivateMessageHandler(
             📅 **Duration:** $dateRange
             
             Ready to join the campaign? Tap the button below to get started!
-            
-            Launch the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}
         """.trimIndent()
         
         val request = TelegramRequest.SendMessageRequest(
             chat_id = ChatId(chatId.toString()),
             text = message,
-            parse_mode = ParseMode.Markdown
+            parse_mode = ParseMode.Markdown,
+            reply_markup = createWebAppButton(campaign.campaignId, "🚀 Join Campaign")
         )
         
         sendMessageSafely(request, "campaign details for campaign ${campaign.campaignId}")
@@ -135,12 +137,25 @@ class PrivateMessageHandler(
             "${index + 1}. $name"
         }.joinToString("\n")
         
-        val fullMessage = "$message\n\n$campaignList\n\nTo start a campaign, use the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=CAMPAIGN_ID"
+        val fullMessage = "$message\n\n$campaignList\n\nSelect a campaign using the buttons below:"
+        
+        val buttons = campaigns.map { campaign ->
+            val details = campaign.parseCampaignDetails()
+            val name = details?.name ?: campaign.campaignName ?: "Campaign ${campaign.campaignId}"
+            val buttonText = "🎯 $name"
+            InlineKeyboardButton(
+                text = buttonText,
+                web_app = WebAppInfo(url = "https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}")
+            )
+        }
+        
+        val keyboard = InlineKeyboardMarkup(inline_keyboard = buttons.chunked(1))
         
         val request = TelegramRequest.SendMessageRequest(
             chat_id = ChatId(chatId.toString()),
             text = fullMessage,
-            parse_mode = ParseMode.Markdown
+            parse_mode = ParseMode.Markdown,
+            reply_markup = keyboard
         )
         
         sendMessageSafely(request, "campaign selection with ${campaigns.size} campaigns")
@@ -195,13 +210,14 @@ class PrivateMessageHandler(
             • Check your leaderboard position
             • See your completed quests
             
-            Launch the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}
+            Tap the button below to view your results:
         """.trimIndent()
         
         val request = TelegramRequest.SendMessageRequest(
             chat_id = ChatId(chatId.toString()),
             text = message,
-            parse_mode = ParseMode.Markdown
+            parse_mode = ParseMode.Markdown,
+            reply_markup = createWebAppButton(campaign.campaignId, "📊 View Results")
         )
         
         sendMessageSafely(request, "ended campaign message")
@@ -232,4 +248,34 @@ class PrivateMessageHandler(
             log.error("Failed to send $messageType", e)
         }
     }
-} 
+    
+    private fun escapeMarkdown(text: String): String {
+        return text.replace("_", "\\_")
+                  .replace("*", "\\*")
+                  .replace("[", "\\[")
+                  .replace("]", "\\]")
+                  .replace("(", "\\(")
+                  .replace(")", "\\)")
+                  .replace("~", "\\~")
+                  .replace("`", "\\`")
+                  .replace(">", "\\>")
+                  .replace("#", "\\#")
+                  .replace("+", "\\+")
+                  .replace("-", "\\-")
+                  .replace("=", "\\=")
+                  .replace("|", "\\|")
+                  .replace("{", "\\{")
+                  .replace("}", "\\}")
+                  .replace(".", "\\.")
+                  .replace("!", "\\!")
+    }
+    
+    private fun createWebAppButton(campaignId: Int, buttonText: String = "🚀 Launch Campaign"): InlineKeyboardMarkup {
+        val webAppUrl = "https://t.me/${config.botName()}/${config.miniAppName()}?startapp=$campaignId"
+        val button = InlineKeyboardButton(
+            text = buttonText,
+            url = webAppUrl
+        )
+        return InlineKeyboardMarkup(inline_keyboard = listOf(listOf(button)))
+    }
+}

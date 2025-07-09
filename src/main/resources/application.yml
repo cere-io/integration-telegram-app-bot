@@ -22,7 +22,7 @@ quarkus:
       origins: '*'
 
 agent-service:
-  bot-name: '${AGENT_SERVICE_BOT_NAME:ulad_bullish_bot}'
+  bot-name: '${AGENT_SERVICE_BOT_NAME:stg_ddc_streaming_bot}'
   mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
 
 "%dev":
