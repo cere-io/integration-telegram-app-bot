@@ -14,5 +14,5 @@ interface BotApi {
     
     @POST
     @Path("/sendMessage")
-    fun sendMessage(rq: TelegramRequest.SendMessageRequest): TelegramResponse<com.github.omarmiatello.telegram.Message>
+    fun sendMessage(rq: TelegramRequest.SendMessageRequest): String
 }

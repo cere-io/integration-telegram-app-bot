@@ -9,6 +9,10 @@ interface Config {
     fun groups(): Map<String, Group>
 
     fun privateKey(): String
+    
+    fun botName(): String
+    
+    fun miniAppName(): String
 
     interface Group {
         fun groupId(): Long

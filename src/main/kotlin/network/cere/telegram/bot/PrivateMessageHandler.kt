@@ -91,7 +91,7 @@ class PrivateMessageHandler(
         if (campaign.isActive()) {
             sendCampaignDetails(chatId, campaign)
         } else {
-            sendInactiveCampaignMessage(chatId)
+            sendEndedCampaignMessage(chatId, campaign)
         }
     }
     
@@ -110,7 +110,7 @@ class PrivateMessageHandler(
             
             Ready to join the campaign? Tap the button below to get started!
             
-            Launch the mini app: https://t.me/ulad_bullish_bot/viewer?startapp=${campaign.campaignId}
+            Launch the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}
         """.trimIndent()
         
         val request = TelegramRequest.SendMessageRequest(
@@ -119,8 +119,7 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent campaign details for campaign ${campaign.campaignId}")
+        sendMessageSafely(request, "campaign details for campaign ${campaign.campaignId}")
     }
     
     private fun sendCampaignSelection(chatId: Long, campaigns: List<Campaign>) {
@@ -136,7 +135,7 @@ class PrivateMessageHandler(
             "${index + 1}. $name"
         }.joinToString("\n")
         
-        val fullMessage = "$message\n\n$campaignList\n\nTo start a campaign, use the mini app: https://t.me/ulad_bullish_bot/viewer?startapp=CAMPAIGN_ID"
+        val fullMessage = "$message\n\n$campaignList\n\nTo start a campaign, use the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=CAMPAIGN_ID"
         
         val request = TelegramRequest.SendMessageRequest(
             chat_id = ChatId(chatId.toString()),
@@ -144,8 +143,7 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent campaign selection with ${campaigns.size} campaigns")
+        sendMessageSafely(request, "campaign selection with ${campaigns.size} campaigns")
     }
     
     private fun sendWelcomeMessage(chatId: Long) {
@@ -163,8 +161,7 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent welcome message")
+        sendMessageSafely(request, "welcome message")
     }
     
     private fun sendNoCampaignsMessage(chatId: Long) {
@@ -182,17 +179,23 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent no campaigns message")
+        sendMessageSafely(request, "no campaigns message")
     }
     
-    private fun sendInactiveCampaignMessage(chatId: Long) {
+    private fun sendEndedCampaignMessage(chatId: Long, campaign: Campaign) {
+        val details = campaign.parseCampaignDetails()
+        val name = details?.name ?: campaign.campaignName ?: "Campaign"
+        
         val message = """
-            ⚠️ **Campaign Not Available**
+            🏁 **Campaign Ended: $name**
             
-            This campaign is currently not active or has ended.
+            This campaign has ended, but you can still check your results!
             
-            Please check with your organization for active campaigns.
+            • View your earned points
+            • Check your leaderboard position
+            • See your completed quests
+            
+            Launch the mini app: https://t.me/${config.botName()}/${config.miniAppName()}?startapp=${campaign.campaignId}
         """.trimIndent()
         
         val request = TelegramRequest.SendMessageRequest(
@@ -201,8 +204,7 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent inactive campaign message")
+        sendMessageSafely(request, "ended campaign message")
     }
     
     private fun sendErrorMessage(chatId: Long) {
@@ -218,7 +220,16 @@ class PrivateMessageHandler(
             parse_mode = ParseMode.Markdown
         )
         
-        botApi.sendMessage(request)
-        log.info("Sent error message")
+        sendMessageSafely(request, "error message")
+    }
+    
+    private fun sendMessageSafely(request: TelegramRequest.SendMessageRequest, messageType: String) {
+        try {
+            val response = botApi.sendMessage(request)
+            log.info("Sent $messageType successfully")
+            log.debug("Telegram API response: $response")
+        } catch (e: Exception) {
+            log.error("Failed to send $messageType", e)
+        }
     }
 } 
