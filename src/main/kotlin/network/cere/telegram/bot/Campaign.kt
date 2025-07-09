@@ -35,8 +35,11 @@ data class Campaign(
     fun parseCampaignDetails(): CampaignDetails? {
         return if (formData != null) {
             try {
-                Json.decodeFromString<CampaignFormData>(formData).campaign
+                val json = Json { ignoreUnknownKeys = true }
+                json.decodeFromString<CampaignFormData>(formData).campaign
             } catch (e: Exception) {
+                println("Failed to parse formData: ${e.message}")
+                println("FormData content: $formData")
                 null
             }
         } else null
@@ -44,6 +47,33 @@ data class Campaign(
     
     fun isActive(): Boolean {
         return status == 1 && archive == 0
+    }
+    
+    fun getDescription(): String {
+        // Try to get description from formData first
+        val details = parseCampaignDetails()
+        return details?.description ?: "No description available"
+    }
+    
+    fun getDateRange(): String {
+        // Try to get date range from formData first, fallback to top-level fields
+        val details = parseCampaignDetails()
+        if (details != null) {
+            val formattedRange = details.formatDateRange()
+            if (formattedRange != "Date range not available") {
+                return formattedRange
+            }
+        }
+        
+        // Fallback to top-level startDate and endDate
+        return try {
+            val formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy")
+            val start = Instant.parse(startDate).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            val end = Instant.parse(endDate).atZone(ZoneId.systemDefault()).toLocalDateTime()
+            "${start.format(formatter)} - ${end.format(formatter)}"
+        } catch (e: Exception) {
+            "Date range not available"
+        }
     }
 }
 

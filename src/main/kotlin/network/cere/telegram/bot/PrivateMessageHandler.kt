@@ -101,8 +101,8 @@ class PrivateMessageHandler(
     private fun sendCampaignDetails(chatId: Long, campaign: Campaign) {
         val details = campaign.parseCampaignDetails()
         val name = details?.name ?: campaign.campaignName ?: "Campaign"
-        val description = details?.description ?: "No description available"
-        val dateRange = details?.formatDateRange() ?: "Date range not available"
+        val description = campaign.getDescription()
+        val dateRange = campaign.getDateRange()
         
         val message = """
             🎯 **$name**
