@@ -10,6 +10,10 @@ quarkus:
       url: '${compute-engine.url}'
     cere-wallet:
       url: '${cere-wallet.url}'
+    rob-api:
+      url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
+      headers:
+        Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
   kotlin-serialization:
     json:
       encode-defaults: false
@@ -18,6 +22,10 @@ quarkus:
     cors:
       ~: true
       origins: '*'
+
+agent-service:
+  bot-name: '${AGENT_SERVICE_BOT_NAME:stg_ddc_streaming_bot}'
+  mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
 
 "%dev":
   quarkus:

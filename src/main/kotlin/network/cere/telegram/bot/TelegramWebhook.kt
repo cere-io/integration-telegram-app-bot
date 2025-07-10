@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory
 class TelegramWebhook(
     @ConfigProperty(name = "telegram.webhook.token") private val authToken: String,
     private val groupMessageHandler: GroupMessageHandler,
+    private val privateMessageHandler: PrivateMessageHandler,
 ) {
     companion object {
         const val AUTH_HEADER_NAME = "X-Telegram-Bot-Api-Secret-Token"
@@ -40,15 +41,24 @@ class TelegramWebhook(
         runCatching {
             val update = Update.fromJson(payloadJson)
             val type = update.message?.chat?.type
-            if (type in handledTypes) {
-                val message = update.message
-                if (message?.text?.startsWith("/") == true ||
-                    message?.reply_to_message?.from?.is_bot == true
-                ) {
-                    // skip
-                } else {
-                    log.info("Message doesn't match processing criteria - privacy mode active")
-                    groupMessageHandler.handle(update)
+            when (type) {
+                "private" -> {
+                    log.info("Processing private message")
+                    privateMessageHandler.handle(update)
+                }
+                in handledTypes -> {
+                    val message = update.message
+                    if (message?.text?.startsWith("/") == true ||
+                        message?.reply_to_message?.from?.is_bot == true
+                    ) {
+                        // skip
+                    } else {
+                        log.info("Message doesn't match processing criteria - privacy mode active")
+                        groupMessageHandler.handle(update)
+                    }
+                }
+                else -> {
+                    log.debug("Ignoring message type: $type")
                 }
             }
         }.onFailure { log.error("Error on processing", it) }
