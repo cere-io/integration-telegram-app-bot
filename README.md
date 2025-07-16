@@ -49,3 +49,31 @@ Register Mini App for bot:
 - Provide information about app (you can serve app from the same URL as a bot's one - just copy static resources into `src/main/resources/META-INF/resources` folder)
 - Your app will be available by direct URL `https://t.me/<bot>/<app>`
 - Optionally you can configure `Menu Button` for bot to open Mini App by URL above
+
+## Features
+
+### 1. Message Onboarding (Webhook)
+- Captures group messages and sends them to Compute Engine as events
+- Requires group configuration in `.env` file
+
+### 2. Campaign Management (Private Messages) 
+- Handles `/start` commands with deep links
+- Shows campaign information and provides WebApp access
+- Dynamic campaign discovery via ROB API
+
+### 3. Payload Processing API
+- **Dynamic Group Discovery** - No manual configuration needed!
+- Automatically sends notifications to groups the bot is subscribed to
+- Supports 14+ data types with intelligent formatting
+- RESTful API for external systems integration
+
+#### Quick Payload API Test:
+```bash
+# Add bot to a Telegram group first, then:
+curl -X POST http://localhost:8080/api/payload/send-json \
+  -H "Content-Type: application/json" \
+  -d '"🤖 Hello from the Payload API!"' \
+  -G -d "source=test-system"
+```
+
+See `PAYLOAD_API1.md` for complete API documentation.

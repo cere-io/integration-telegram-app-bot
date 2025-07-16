@@ -27,6 +27,19 @@ agent-service:
   bot-name: '${AGENT_SERVICE_BOT_NAME:stg_ddc_streaming_bot}'
   mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
 
+# Payload Notification Configuration
+payload-notifications:
+  # By default, payload notifications are sent to all groups the bot is subscribed to
+  # Groups are discovered dynamically when bot receives messages or is added to groups
+  # 
+  # Override with specific chat IDs if needed:
+  # target-chats:
+  #   - "-1001234567890"  # Example group chat ID
+  #   - "-1001234567891"  # Another group chat ID  
+  #   - "123456789"       # Example private chat ID (user ID)
+  #   - "987654321"       # Another private chat ID
+  enabled: true
+
 "%dev":
   quarkus:
     rest-client:
