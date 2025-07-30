@@ -1,24 +1,22 @@
 package network.cere.telegram.bot
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
-@Serializable
 data class MemeImageEventPayload(
-    @SerialName("organization_id")
+    @JsonProperty("organization_id")
     val orgId: Int,
 
-    @SerialName("campaign_id")
+    @JsonProperty("campaign_id")
     val campaignId: String,
 
-    @SerialName("group_id")
+    @JsonProperty("group_id")
     val groupId: Long,
 
-    @SerialName("message_id")
+    @JsonProperty("message_id")
     val messageId: Long,
 
-    @SerialName("image_url")
-    val imageUrl: String,
+    @JsonProperty("image_cid")
+    val imageCid: String,
 
     val prompt: String,
 )

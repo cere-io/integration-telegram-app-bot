@@ -1,36 +1,36 @@
 package network.cere.telegram.bot
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.databind.JsonNode
 import java.time.Instant
 import java.util.*
 
-@Serializable
 data class Event(
-    val payload: JsonElement,
+    val payload: JsonNode,
 
-    @SerialName("app_id")
+    @JsonProperty("app_id")
     val appId: String,
 
-    @SerialName("account_id")
+    @JsonProperty("account_id")
     val accountId: String,
 
-    @SerialName("user_pub_key")
+    val address: String,
+
+    @JsonProperty("user_pub_key")
     val userPubKey: String,
 
-    @SerialName("data_service_pub_key")
+    @JsonProperty("data_service_pub_key")
     val dataServicePubKey: String,
 
     val signing: String,
 
-    @SerialName("event_type")
+    @JsonProperty("event_type")
     val type: String,
 
-    @SerialName("connection_id")
+    @JsonProperty("connection_id")
     val connectionId: String = UUID.randomUUID().toString(),
 
-    @SerialName("session_id")
+    @JsonProperty("session_id")
     val sessionId: String = UUID.randomUUID().toString(),
 
     val id: String = UUID.randomUUID().toString(),

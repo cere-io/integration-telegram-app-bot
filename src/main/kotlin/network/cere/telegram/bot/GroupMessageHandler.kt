@@ -2,10 +2,11 @@ package network.cere.telegram.bot
 
 import com.github.omarmiatello.telegram.ReplyParameters
 import com.github.omarmiatello.telegram.TelegramRequest
+import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToJsonElement
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
@@ -16,9 +17,10 @@ class GroupMessageHandler(
     @RestClient private val computeEngineClient: ComputeEngineClient,
     @RestClient private val cereWalletClient: CereWalletClient,
     @RestClient private val botApi: BotApi,
-    private val json: Json,
+    @RestClient private val botFileApi: BotFileApi,
     private val config: Config,
     private val signer: Signer,
+    private val ddcService: DdcService,
     @ConfigProperty(name = "telegram.webhook.url") webhookUrl: String,
 ) {
     private companion object {
@@ -29,6 +31,7 @@ class GroupMessageHandler(
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
+    private val objectMapper = jacksonObjectMapper()
 
     private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
     private val botFileUrl = "https://${URI.create(webhookUrl).host}/file/"
@@ -69,9 +72,10 @@ class GroupMessageHandler(
                         message.sticker != null -> "[Sticker]"
                         else -> "[Unsupported message type]"
                     },
-            ).let(json::encodeToJsonElement),
+            ).let { objectMapper.valueToTree(it) },
             appId = config.appId(),
             accountId = wallet.accountId,
+            address = wallet.accountId,
             userPubKey = wallet.userPubKey,
             dataServicePubKey = signer.publicKey,
             signing  = byteArrayOf(0x00, 0x01, 0x00).hex(false),
@@ -87,10 +91,10 @@ class GroupMessageHandler(
     }
 
     private fun handleImageForMeme(update: Update) {
-        val photo = requireNotNull(update.message?.photo)
-            .filter { it.file_size != null }
-            .sortedByDescending { it.file_size }
-            .firstOrNull { it.file_size!! <= MAX_IMAGE_SIZE }
+        val photo = update.message?.photo
+            ?.filter { it.file_size != null }
+            ?.sortedByDescending { it.file_size }
+            ?.firstOrNull { it.file_size!! <= MAX_IMAGE_SIZE }
         val caption = requireNotNull(update.message?.caption).removePrefix(MEME_HASH_TAG).trim()
         log.info("Image received {} {}", photo, caption)
 
@@ -114,17 +118,50 @@ class GroupMessageHandler(
             val wallet =
                 cereWalletClient.walletByTelegramUserId(requireNotNull(update.message?.from?.id?.longValue)).data
             val groupConfig = groupConfigs.getValue(chatId.longValue)
+            
+            // Download image from Telegram and upload to DDC
+            val imageCid = try {
+                val fileId = requireNotNull(photo?.file_id)
+                log.info("Downloading image from Telegram: {}", fileId)
+                
+                // Get file info and download
+                val fileResponse = botApi.getFile(GetFileRequest(fileId))
+                val filePath = requireNotNull(fileResponse.result?.file_path) { "File path not found" }
+                val imageFile = botFileApi.download(filePath)
+                val imageBytes = imageFile.toFile().readBytes()
+                
+                log.info("Downloaded image, size: {} bytes. Uploading to DDC...", imageBytes.size)
+                
+                // Store in DDC
+                val cid = ddcService.storeFile(imageBytes)
+                log.info("Image uploaded to DDC with CID: {}", cid)
+                cid
+            } catch (e: Exception) {
+                log.error("Failed to upload image to DDC", e)
+                // Send error message to user
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chatId,
+                    text = "Sorry, failed to process your image. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = requireNotNull(update.message?.message_id),
+                        chat_id = chatId
+                    )
+                ).also(botApi::sendMessage)
+                return
+            }
+            
             val event = Event(
                 payload = MemeImageEventPayload(
                     orgId = groupConfig.orgId(),
                     campaignId = groupConfig.campaignId(),
                     groupId = requireNotNull(chatId.longValue),
                     messageId = requireNotNull(update.message?.message_id).longValue,
-                    imageUrl = "$botFileUrl${photo?.file_id}",
+                    imageCid = imageCid,
                     prompt = caption,
-                ).let(json::encodeToJsonElement),
+                ).let { objectMapper.valueToTree(it) },
                 appId = config.appId(),
                 accountId = wallet.accountId,
+                address = wallet.accountId,
                 userPubKey = wallet.userPubKey,
                 dataServicePubKey = signer.publicKey,
                 signing = byteArrayOf(0x00, 0x01, 0x00).hex(false),
