@@ -6,6 +6,8 @@ import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
@@ -28,6 +30,14 @@ class GroupMessageHandler(
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
+        
+        private val objectMapper = jacksonObjectMapper()
+        
+        // Конвертируем объект в JsonElement через Jackson -> JSON строку -> JsonElement
+        private fun <T> T.toJsonElement(): JsonElement {
+            val jsonString = objectMapper.writeValueAsString(this)
+            return Json.parseToJsonElement(jsonString)
+        }
         private const val GENERATE_COMMAND = "/generate"
         private const val MAX_IMAGE_SIZE = 50 * 1024
     }
@@ -74,7 +84,7 @@ class GroupMessageHandler(
                         message.sticker != null -> "[Sticker]"
                         else -> "[Unsupported message type]"
                     },
-            ).let { objectMapper.valueToTree(it) },
+            ).toJsonElement(),
             appId = config.appId(),
             accountId = wallet.accountId,
             address = wallet.accountId,
@@ -158,7 +168,7 @@ class GroupMessageHandler(
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageCid = imageCid,
                     prompt = caption,
-                ).let { objectMapper.valueToTree(it) },
+                ).toJsonElement(),
                 appId = config.appId(),
                 accountId = wallet.accountId,
                 address = wallet.accountId,

@@ -1,27 +1,29 @@
 package network.cere.telegram.bot
 
-import com.fasterxml.jackson.annotation.JsonProperty
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class MessageEventPayload(
-    @JsonProperty("organization_id")
+    @SerialName("organization_id")
     val orgId: Int,
 
-    @JsonProperty("campaign_id")
+    @SerialName("campaign_id")
     val campaignId: String,
 
-    @JsonProperty("group_id")
+    @SerialName("group_id")
     val groupId: Long,
 
-    @JsonProperty("message_id")
+    @SerialName("message_id")
     val messageId: Long,
 
-    @JsonProperty("date_unixtime")
+    @SerialName("date_unixtime")
     val dateUnixTime: Long,
 
-    @JsonProperty("from_user_id")
+    @SerialName("from_user_id")
     val fromUserId: Long,
 
-    @JsonProperty("from_user_name")
+    @SerialName("from_user_name")
     val fromUserName: String,
 
     val text: String,

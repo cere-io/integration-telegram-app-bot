@@ -17,11 +17,9 @@ val quarkusPlatformGroupId: String by project
 val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 
-// Настройки для gRPC генерации
 configurations.all {
     resolutionStrategy.eachDependency {
         if (requested.group == "io.grpc" && requested.name.startsWith("grpc-")) {
-            // Принудительно использовать версию gRPC, совместимую с Quarkus 3.21.0
             useVersion("1.69.1")
         }
     }
@@ -42,7 +40,6 @@ dependencies {
     
     // gRPC
     implementation("io.quarkus:quarkus-grpc")
-    // Добавляем протобуф зависимости, совместимые с Quarkus 3.21.0
     implementation("com.google.protobuf:protobuf-kotlin:4.28.2")
     
     // Multibase for CID decoding
@@ -101,14 +98,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 }
 
-// Дополнительные настройки для Quarkus gRPC генерации
 tasks.named("quarkusGenerateCode") {
     doFirst {
         println("Generating gRPC code with enhanced Kotlin compatibility...")
     }
 }
 
-// Принудительно используем правильные настройки для protobuf генерации
 if (tasks.findByName("generateProto") != null) {
     tasks.named("generateProto") {
         doFirst {
