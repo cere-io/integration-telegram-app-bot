@@ -35,6 +35,8 @@ dependencies {
     // Web  
     implementation("io.quarkus:quarkus-rest-jackson")
     implementation("io.quarkus:quarkus-rest-client-jackson")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("com.fasterxml.jackson.module:jackson-module-parameter-names")
     implementation("io.quarkus:quarkus-smallrye-health")
     
     // gRPC
@@ -95,6 +97,10 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    mustRunAfter("quarkusGenerateCode")
 }
 
 tasks.named("quarkusGenerateCode") {

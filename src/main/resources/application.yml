@@ -1,6 +1,6 @@
 ddc:
-  bucket: ${DDC_BUCKET:573056}
-  mnemonic: ${DDC_MNEMONIC:material own find flush hour view off begin crater weather world arrow}
+  bucket: '${DDC_BUCKET}'
+  mnemonic: '${DDC_MNEMONIC}'
 
 quarkus:
   cache:

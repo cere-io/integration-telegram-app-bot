@@ -5,7 +5,7 @@ import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.eclipse.microprofile.rest.client.inject.RestClient
@@ -26,7 +26,7 @@ class GroupMessageHandler(
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
         
-        private val objectMapper = ObjectMapper()
+        private val objectMapper = jacksonObjectMapper()
         
         private fun <T> T.toJsonElement(): JsonElement {
             val jsonString = objectMapper.writeValueAsString(this)
@@ -58,6 +58,7 @@ class GroupMessageHandler(
             handleImageForMeme(update)
         }
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
+        
         val event = Event(
             payload = MessageEventPayload(
                 orgId = groupConfig.orgId(),
@@ -167,6 +168,7 @@ class GroupMessageHandler(
                 signing = byteArrayOf(0x00, 0x01, 0x00).hex(false),
                 type = EVENT_TYPE_MEME_IMAGE,
             ).sign(signer)
+            
             runCatching {
                 computeEngineClient.sendEvent(event)
                 log.info("✅ Event sent successfully")

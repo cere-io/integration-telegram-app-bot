@@ -4,7 +4,7 @@ import com.github.omarmiatello.telegram.Update
 import io.smallrye.common.annotation.RunOnVirtualThread
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
-import kotlinx.serialization.json.JsonElement
+import com.fasterxml.jackson.databind.JsonNode
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.resteasy.reactive.RestHeader
 import org.jboss.resteasy.reactive.RestResponse
@@ -28,7 +28,7 @@ class TelegramWebhook(
     @RunOnVirtualThread
     fun handle(
         @RestHeader(AUTH_HEADER_NAME) auth: String,
-        payload: JsonElement,
+        payload: JsonNode,
     ): RestResponse<Unit> {
         if (auth != authToken) {
             log.warn("Unauthorized webhook request - token mismatch")
