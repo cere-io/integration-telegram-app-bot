@@ -144,4 +144,88 @@ class TelegramDdcService(
     fun storeText(text: String): String {
         return storeFile(text.toByteArray())
     }
+
+    /**
+     * Get file from DDC by CID
+     */
+    fun getFile(cid: String): ByteArray {
+        log.info("Getting file from DDC via gRPC. CID: {}", cid)
+        
+        val keyPair = signingKeyPairFromMnemonic(mnemonic)
+        val signer = keyPair.publicKey.encoded
+
+        val payload = Payload.newBuilder()
+            .setBucketId(bucket)
+            .setExpiresAt(System.currentTimeMillis() + 1000 * 60)
+            .setCanDelegate(false)
+            .addOperations(Operation.GET)
+            .build()
+
+        val unsignedAuthToken = AuthToken.newBuilder()
+            .setPayload(payload)
+            .build()
+
+        val signatureValue = TweetNaclFast.Signature(null, keyPair.privateKey.encoded)
+            .detached(unsignedAuthToken.toByteArray())
+
+        val signature = Signature.newBuilder()
+            .setValue(ByteString.copyFrom(signatureValue))
+            .setSigner(ByteString.copyFrom(signer))
+            .setAlgorithm(Signature.Algorithm.ED_25519)
+            .build()
+
+        val signedAuthToken = unsignedAuthToken.toBuilder().setSignature(signature).build()
+
+        val activityRequest = ActivityRequest.newBuilder()
+            .setRequestId(UUID.randomUUID().toString())
+            .setRequestType(ActivityRequest.RequestType.REQUEST_TYPE_GET)
+            .setContentType(ActivityRequest.ContentType.CONTENT_TYPE_PIECE)
+            .setBucketId(bucket)
+            .setTimestamp(Instant.now().toEpochMilli())
+            .build()
+        val activityRequestSignatureValue = TweetNaclFast.Signature(null, keyPair.privateKey.encoded)
+            .detached(activityRequest.toByteArray())
+        val activityRequestSignature = Signature.newBuilder()
+            .setValue(ByteString.copyFrom(activityRequestSignatureValue))
+            .setSigner(ByteString.copyFrom(signer))
+            .setAlgorithm(Signature.Algorithm.ED_25519)
+            .build()
+        val signedActivityRequest = activityRequest.toBuilder()
+            .setSignature(activityRequestSignature)
+            .build()
+
+        val metadata = io.grpc.Metadata()
+
+        metadata.put(io.grpc.Metadata.Key.of("token", io.grpc.Metadata.ASCII_STRING_MARSHALLER), Base58.encode(signedAuthToken.toByteArray()))
+        metadata.put(
+            io.grpc.Metadata.Key.of("request", io.grpc.Metadata.ASCII_STRING_MARSHALLER),
+            Base64.getEncoder().encodeToString(signedActivityRequest.toByteArray())
+        )
+
+        val ddcWithAuth = ddc.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata))
+
+        return runCatching {
+            // Convert CID to bytes for the request
+            val cidBytes = try {
+                // Try to decode multibase CID
+                Multibase.decode(cid)
+            } catch (e: Exception) {
+                log.warn("Failed to decode CID as multibase, using UTF-8: {}", e.message)
+                cid.toByteArray(Charsets.UTF_8)
+            }
+            
+            val request = GetRequest.newBuilder()
+                .setBucketId(bucket)
+                .setCid(ByteString.copyFrom(cidBytes))
+                .setPath("")
+                .build()
+                
+            val response = ddcWithAuth.get(request)
+            val fileData = response.node.data.toByteArray()
+            log.info("File retrieved from DDC via gRPC. Size: {} bytes", fileData.size)
+            fileData
+        }.onFailure {
+            log.error("Unable to get file from DDC via gRPC", it)
+        }.getOrThrow()
+    }
 }

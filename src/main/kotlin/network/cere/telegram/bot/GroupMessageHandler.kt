@@ -5,7 +5,6 @@ import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
@@ -21,7 +20,9 @@ class GroupMessageHandler(
     private val config: Config,
     private val signer: Signer,
     private val ddcService: DdcService,
+    private val memeCallback: MemeCallback,
     @ConfigProperty(name = "telegram.webhook.url") webhookUrl: String,
+    @ConfigProperty(name = "ddc.bucket") private val bucket: Long,
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
@@ -132,9 +133,37 @@ class GroupMessageHandler(
                 
                 log.info("Downloaded image, size: {} bytes. Uploading to DDC...", imageBytes.size)
                 
+                
                 // Store in DDC
                 val cid = ddcService.storeFile(imageBytes)
                 log.info("Image uploaded to DDC with CID: {}", cid)
+                
+                // Send image back using MemeCallback (supports both URL and CID)
+                try {
+                    log.info("Sending meme back using MemeCallback with CID: {}", cid)
+                    
+                    val memeRequest = MemeCallbackRequest(
+                        groupId = chatId.longValue,
+                        messageId = requireNotNull(update.message?.message_id).longValue,
+                        imageCid = cid
+                    )
+                    
+                    memeCallback.replyWithMeme(memeRequest)
+                    log.info("✅ Image sent back to user successfully via MemeCallback")
+                    
+                } catch (e: Exception) {
+                    log.error("Failed to send image back to user via MemeCallback", e)
+                    // Send text message with CID instead
+                    val ddcPublicUrl = "https://cdn.testnet.cere.network/$bucket/$cid/"
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chatId,
+                        text = "✅ Image processed and stored in DDC!\n🔗 CID: $cid\n📎 URL: $ddcPublicUrl\n(Could not display image: ${e.message})",
+                        reply_parameters = ReplyParameters(
+                            message_id = requireNotNull(update.message?.message_id),
+                            chat_id = chatId
+                        )
+                    ).also(botApi::sendMessage)
+                }
                 cid
             } catch (e: Exception) {
                 log.error("Failed to upload image to DDC", e)
