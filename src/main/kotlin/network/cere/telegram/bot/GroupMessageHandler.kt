@@ -124,58 +124,28 @@ class GroupMessageHandler(
             val imageCid = try {
                 val fileId = requireNotNull(photo?.file_id)
                 log.info("Downloading image from Telegram: {}", fileId)
-                
-                // Get file info and download
-                val fileResponse = botApi.getFile(GetFileRequest(fileId))
-                val filePath = requireNotNull(fileResponse.result?.file_path) { "File path not found" }
-                val imageFile = botFileApi.download(filePath)
-                val imageBytes = imageFile.toFile().readBytes()
-                
-                log.info("Downloaded image, size: {} bytes. Uploading to DDC...", imageBytes.size)
-                
-                
-                // Store in DDC
-                val cid = ddcService.storeFile(imageBytes)
-                log.info("Image uploaded to DDC with CID: {}", cid)
-                
-                // Send image back using MemeCallback (supports both URL and CID)
-                try {
-                    log.info("Sending meme back using MemeCallback with CID: {}", cid)
-                    
-                    val memeRequest = MemeCallbackRequest(
-                        groupId = chatId.longValue,
-                        messageId = requireNotNull(update.message?.message_id).longValue,
-                        imageCid = cid
-                    )
-                    
-                    memeCallback.replyWithMeme(memeRequest)
-                    log.info("✅ Image sent back to user successfully via MemeCallback")
-                    
-                } catch (e: Exception) {
-                    log.error("Failed to send image back to user via MemeCallback", e)
-                    // Send text message with CID instead
-                    val ddcPublicUrl = "https://cdn.testnet.cere.network/$bucket/$cid/"
+
+                val filePath = requireNotNull(botApi.getFile(GetFileRequest(fileId)).result?.file_path) {
+                    "File path not found"
+                }
+                val imageBytes = botFileApi.download(filePath).toFile().readBytes()
+                log.info("Downloaded image, size: {} bytes. Uploading to DDC...")
+
+                ddcService.storeFile(imageBytes).also {
+                    log.info("Image uploaded to DDC with CID: {}", it)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to upload image to DDC", e)
+                botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chatId,
-                        text = "✅ Image processed and stored in DDC!\n🔗 CID: $cid\n📎 URL: $ddcPublicUrl\n(Could not display image: ${e.message})",
+                        text = "Sorry, failed to process your image. Please try again later.",
                         reply_parameters = ReplyParameters(
                             message_id = requireNotNull(update.message?.message_id),
                             chat_id = chatId
                         )
-                    ).also(botApi::sendMessage)
-                }
-                cid
-            } catch (e: Exception) {
-                log.error("Failed to upload image to DDC", e)
-                // Send error message to user
-                TelegramRequest.SendMessageRequest(
-                    chat_id = chatId,
-                    text = "Sorry, failed to process your image. Please try again later.",
-                    reply_parameters = ReplyParameters(
-                        message_id = requireNotNull(update.message?.message_id),
-                        chat_id = chatId
                     )
-                ).also(botApi::sendMessage)
+                )
                 return
             }
             

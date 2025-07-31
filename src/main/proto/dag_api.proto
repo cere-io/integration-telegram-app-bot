@@ -5,8 +5,6 @@ package dag;
 option java_multiple_files = true;
 option java_package = "io.cere.etl";
 
-import "auth_token.proto";
-
 service DagApi {
   rpc Put(PutRequest) returns (PutResponse) {}
   rpc Get(GetRequest) returns (GetResponse) {}

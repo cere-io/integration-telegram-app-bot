@@ -1,20 +1,18 @@
 package network.cere.telegram.bot
 
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
+import com.fasterxml.jackson.annotation.JsonProperty
 
-@Serializable
 data class MemeCallbackRequest(
-    @SerialName("group_id")
+    @JsonProperty("group_id")
     val groupId: Long,
 
-    @SerialName("message_id")
+    @JsonProperty("message_id")
     val messageId: Long,
 
-    @SerialName("image_url")
+    @JsonProperty("image_url")
     val imageUrl: String? = null,
     
-    @SerialName("image_cid")
+    @JsonProperty("image_cid")
     val imageCid: String? = null,
 ) {
     init {
