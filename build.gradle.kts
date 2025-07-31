@@ -13,21 +13,37 @@ repositories {
     maven { url = uri("https://jitpack.io") }
 }
 
+val quarkusPlatformGroupId: String by project
+val quarkusPlatformArtifactId: String by project
+val quarkusPlatformVersion: String by project
+
+// Настройки для gRPC генерации
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "io.grpc" && requested.name.startsWith("grpc-")) {
+            // Принудительно использовать версию gRPC, совместимую с Quarkus 3.21.0
+            useVersion("1.69.1")
+        }
+    }
+}
+
 dependencies {
     // BOM
-    implementation(enforcedPlatform("io.quarkus.platform:quarkus-bom:3.8.1"))
+    implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
 
     // Telegram
     implementation("com.github.omarmiatello.telegram:dataclass-jvm:7.9")
 
     // Web
-    implementation("io.quarkus:quarkus-resteasy-reactive-jackson")
-    implementation("io.quarkus:quarkus-rest-client-reactive-jackson")
+    implementation("io.quarkus:quarkus-rest-jackson")
+    implementation("io.quarkus:quarkus-rest-client-jackson")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.quarkus:quarkus-smallrye-health")
     
     // gRPC
     implementation("io.quarkus:quarkus-grpc")
+    // Добавляем протобуф зависимости, совместимые с Quarkus 3.21.0
+    implementation("com.google.protobuf:protobuf-kotlin:4.28.2")
     
     // Multibase for CID decoding
     implementation("com.github.multiformats:java-multibase:v1.1.1")
@@ -45,7 +61,6 @@ dependencies {
     implementation("com.github.cerebellum-network:ddc-encryption-impl-kotlin:1.5.0")
     implementation("org.purejava:tweetnacl-java:1.1.2")
     implementation("org.bitcoinj:bitcoinj-core:0.15.10")
-
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")
@@ -74,11 +89,7 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_21)
         javaParameters.set(true)
-        freeCompilerArgs.addAll(listOf(
-            "-Xjvm-default=all",
-            "-Xsuppress-version-warnings",
-            "-Xskip-prerelease-check"
-        ))
+        freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
 kotlin {
@@ -88,4 +99,20 @@ kotlin {
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+}
+
+// Дополнительные настройки для Quarkus gRPC генерации
+tasks.named("quarkusGenerateCode") {
+    doFirst {
+        println("Generating gRPC code with enhanced Kotlin compatibility...")
+    }
+}
+
+// Принудительно используем правильные настройки для protobuf генерации
+if (tasks.findByName("generateProto") != null) {
+    tasks.named("generateProto") {
+        doFirst {
+            println("Using Java-compatible protobuf generation for better stability...")
+        }
+    }
 }

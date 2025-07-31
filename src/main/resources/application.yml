@@ -12,6 +12,8 @@ quarkus:
     serialization-inclusion: non-null
   
   grpc:
+    server:
+      use-separate-server: false
     clients:
       "ddc":
         port: ${DDC_GRPC_PORT:9090}
