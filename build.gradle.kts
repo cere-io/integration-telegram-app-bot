@@ -32,10 +32,9 @@ dependencies {
     // Telegram
     implementation("com.github.omarmiatello.telegram:dataclass-jvm:7.9")
 
-    // Web
+    // Web  
     implementation("io.quarkus:quarkus-rest-jackson")
     implementation("io.quarkus:quarkus-rest-client-jackson")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.quarkus:quarkus-smallrye-health")
     
     // gRPC

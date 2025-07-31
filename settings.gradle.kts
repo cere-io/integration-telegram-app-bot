@@ -7,8 +7,8 @@ pluginManagement {
         mavenLocal()
     }
     plugins {
-        id("${quarkusPluginId}") version "${quarkusPluginVersion}"
-        kotlin("jvm") version "2.0.21"
+        id(quarkusPluginId) version quarkusPluginVersion
+        kotlin("jvm") version "2.0.0"
     }
 }
 plugins {

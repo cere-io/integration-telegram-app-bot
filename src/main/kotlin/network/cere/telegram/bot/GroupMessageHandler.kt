@@ -5,13 +5,11 @@ import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
-import java.net.URI
 
 @ApplicationScoped
 class GroupMessageHandler(
@@ -22,18 +20,14 @@ class GroupMessageHandler(
     private val config: Config,
     private val signer: Signer,
     private val ddcService: DdcService,
-    private val memeCallback: MemeCallback,
-    @ConfigProperty(name = "telegram.webhook.url") webhookUrl: String,
-    @ConfigProperty(name = "ddc.bucket") private val bucket: Long,
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
         
-        private val objectMapper = jacksonObjectMapper()
+        private val objectMapper = ObjectMapper()
         
-        // Конвертируем объект в JsonElement через Jackson -> JSON строку -> JsonElement
         private fun <T> T.toJsonElement(): JsonElement {
             val jsonString = objectMapper.writeValueAsString(this)
             return Json.parseToJsonElement(jsonString)
@@ -43,10 +37,8 @@ class GroupMessageHandler(
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
-    private val objectMapper = jacksonObjectMapper()
 
     private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
-    private val botFileUrl = "https://${URI.create(webhookUrl).host}/file/"
 
     fun handle(update: Update) {
         val message = update.message ?: return
