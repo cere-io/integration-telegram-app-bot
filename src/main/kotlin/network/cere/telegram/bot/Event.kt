@@ -16,8 +16,6 @@ data class Event(
     @SerialName("account_id")
     val accountId: String,
 
-    val address: String,
-
     @SerialName("user_pub_key")
     val userPubKey: String,
 
