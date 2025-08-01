@@ -12,5 +12,14 @@ data class MemeCallbackRequest(
     val messageId: Long,
 
     @SerialName("image_url")
-    val imageUrl: String,
-)
+    val imageUrl: String? = null,
+
+    @SerialName("image_cid")
+    val imageCid: String? = null,
+) {
+    init {
+        require(imageUrl != null || imageCid != null) {
+            "Either imageUrl or imageCid must be provided"
+        }
+    }
+}

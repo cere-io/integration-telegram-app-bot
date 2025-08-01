@@ -10,11 +10,20 @@ plugins {
 repositories {
     mavenCentral()
     mavenLocal()
+    maven { url = uri("https://jitpack.io") }
 }
 
 val quarkusPlatformGroupId: String by project
 val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.bouncycastle") {
+            useVersion("1.78.1")
+        }
+    }
+}
 
 dependencies {
     // BOM
@@ -28,6 +37,13 @@ dependencies {
     implementation("io.quarkus:quarkus-rest-client-kotlin-serialization")
     implementation("io.quarkus:quarkus-smallrye-health")
 
+    // gRPC
+    implementation("io.quarkus:quarkus-grpc")
+    implementation("com.google.protobuf:protobuf-kotlin:4.28.2")
+
+    // Multibase for CID decoding
+    implementation("com.github.multiformats:java-multibase:v1.1.1")
+
     // Cache
     implementation("io.quarkus:quarkus-cache")
 
@@ -36,7 +52,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
     // Crypto
-    implementation("org.bouncycastle:bcprov-jdk18on")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("com.github.cerebellum-network:ddc-encryption-impl-kotlin:1.5.0")
+    implementation("org.purejava:tweetnacl-java:1.1.2")
+    implementation("org.bitcoinj:bitcoinj-core:0.15.10")
 
     // Config
     implementation("io.quarkus:quarkus-config-yaml")

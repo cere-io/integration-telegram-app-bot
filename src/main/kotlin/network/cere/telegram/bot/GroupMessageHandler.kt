@@ -2,6 +2,7 @@ package network.cere.telegram.bot
 
 import com.github.omarmiatello.telegram.ReplyParameters
 import com.github.omarmiatello.telegram.TelegramRequest
+import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.Json
@@ -20,11 +21,14 @@ class GroupMessageHandler(
     private val config: Config,
     private val signer: Signer,
     @ConfigProperty(name = "telegram.webhook.url") webhookUrl: String,
+    private val ddcService: DdcService,
+    @RestClient private val botFileApi: BotFileApi,
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
+        private const val GENERATE_COMMAND = "/generate"
         private const val MAX_IMAGE_SIZE = 50 * 1024
     }
 
@@ -47,7 +51,7 @@ class GroupMessageHandler(
             log.warn("Unable to identify message author")
             return
         }
-        if (message.photo != null && message.caption?.contains(MEME_HASH_TAG) ?: false) {
+        if (shouldProcessImageGeneration(message)) {
             handleImageForMeme(update)
         }
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
@@ -91,7 +95,7 @@ class GroupMessageHandler(
             .filter { it.file_size != null }
             .sortedByDescending { it.file_size }
             .firstOrNull { it.file_size!! <= MAX_IMAGE_SIZE }
-        val caption = requireNotNull(update.message?.caption).removePrefix(MEME_HASH_TAG).trim()
+        val caption = extractPromptFromMessage(requireNotNull(update.message))
         log.info("Image received {} {}", photo, caption)
 
         val replyMessageAndProcess = when {
@@ -114,13 +118,43 @@ class GroupMessageHandler(
             val wallet =
                 cereWalletClient.walletByTelegramUserId(requireNotNull(update.message?.from?.id?.longValue)).data
             val groupConfig = groupConfigs.getValue(chatId.longValue)
+
+            // Download image from Telegram and upload to DDC
+            val imageCid = try {
+                val fileId = requireNotNull(photo?.file_id)
+                log.info("Downloading image from Telegram: {}", fileId)
+
+                val filePath = requireNotNull(botApi.getFile(GetFileRequest(fileId)).result?.file_path) {
+                    "File path not found"
+                }
+                val imageBytes = botFileApi.download(filePath).toFile().readBytes()
+                log.info("Downloaded image, size: {} bytes. Uploading to DDC...")
+
+                ddcService.storeFile(imageBytes).also {
+                    log.info("Image uploaded to DDC with CID: {}", it)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to upload image to DDC", e)
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chatId,
+                        text = "Sorry, failed to process your image. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = requireNotNull(update.message?.message_id),
+                            chat_id = chatId
+                        )
+                    )
+                )
+                return
+            }
+
             val event = Event(
                 payload = MemeImageEventPayload(
                     orgId = groupConfig.orgId(),
                     campaignId = groupConfig.campaignId(),
                     groupId = requireNotNull(chatId.longValue),
                     messageId = requireNotNull(update.message?.message_id).longValue,
-                    imageUrl = "$botFileUrl${photo?.file_id}",
+                    imageCid = imageCid,
                     prompt = caption,
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
@@ -136,6 +170,23 @@ class GroupMessageHandler(
             }.onFailure {
                 log.error("❌ Failed to send event", it)
             }
+        }
+    }
+
+    private fun shouldProcessImageGeneration(message: com.github.omarmiatello.telegram.Message): Boolean {
+        return when {
+            message.photo != null && message.caption?.contains(MEME_HASH_TAG) == true -> true
+            message.photo != null && message.caption?.startsWith(GENERATE_COMMAND) == true -> true
+            else -> false
+        }
+    }
+
+    private fun extractPromptFromMessage(message: com.github.omarmiatello.telegram.Message): String {
+        val caption = message.caption ?: return ""
+        return when {
+            caption.contains(MEME_HASH_TAG) -> caption.removePrefix(MEME_HASH_TAG).trim()
+            caption.startsWith(GENERATE_COMMAND) -> caption.removePrefix(GENERATE_COMMAND).trim()
+            else -> caption.trim()
         }
     }
 }
