@@ -16,10 +16,13 @@ data class MemeCallbackRequest(
 
     @SerialName("image_cid")
     val imageCid: String? = null,
+
+    @SerialName("image_base64")
+    val imageBase64: String? = null, // Base64 encoded image data
 ) {
     init {
-        require(imageUrl != null || imageCid != null) {
-            "Either imageUrl or imageCid must be provided"
+        require(imageUrl != null || imageCid != null || imageBase64 != null) {
+            "Either imageUrl, imageCid, or imageBase64 must be provided"
         }
     }
 }

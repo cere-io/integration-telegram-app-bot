@@ -32,12 +32,12 @@ quarkus:
       url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
       headers:
         Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
-    kotlin-serialization:
-      json:
-        encode-defaults: false
-        ignore-unknown-keys: true
     ddc-api:
       url: '${DDC_API_URL:http://178.18.148.250:9090}'
+  kotlin-serialization:
+    json:
+      encode-defaults: false
+      ignore-unknown-keys: true
 
   http:
     cors:
