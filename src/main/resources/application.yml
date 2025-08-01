@@ -49,9 +49,9 @@ agent-service:
   mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
   groups:
     some-group:
-      group-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__GROUP_ID}'
-      org-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__ORG_ID}'
-      campaign-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__CAMPAIGN_ID}'
+      group-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__GROUP_ID:-1002820687645}'
+      org-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__ORG_ID:2108}'
+      campaign-id: '${AGENT_SERVICE_GROUP__SOME_GROUP__CAMPAIGN_ID}:12'
 
 "%dev":
   quarkus:
