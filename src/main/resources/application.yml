@@ -9,20 +9,15 @@ quarkus:
       initial-capacity: 1000
       maximum-size: 10000
   
-  jackson:
-    serialization-inclusion: non-null
-  
   grpc:
-    # Настройки для правильной генерации Kotlin gRPC кода
     server:
       use-separate-server: false
     clients:
-      "ddc":
+      ddc:
         port: ${DDC_GRPC_PORT:9090}
         host: ${DDC_GRPC_HOST:178.18.148.250}
         use-quarkus-grpc-client: true
         plain-text: true
-    # Убираем неразпознанные настройки, оставляем только рабочие
 
   rest-client:
     tg-bot-api:
@@ -37,6 +32,10 @@ quarkus:
       url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
       headers:
         Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
+    kotlin-serialization:
+      json:
+        encode-defaults: false
+        ignore-unknown-keys: true
     ddc-api:
       url: '${DDC_API_URL:http://178.18.148.250:9090}'
 
@@ -45,17 +44,7 @@ quarkus:
       ~: true
       origins: '*'
 
-telegram:
-  bot:
-    token: '${TELEGRAM_BOT_TOKEN}'
-  webhook:
-    url: '${TELEGRAM_WEBHOOK_URL}'
-    token: '${TELEGRAM_WEBHOOK_SECRET_TOKEN}'
-    max-connections: 40
-
 agent-service:
-  app-id: '${AGENT_SERVICE_APP_ID}'
-  private-key: '${AGENT_SERVICE_PRIVATE_KEY}'
   bot-name: '${AGENT_SERVICE_BOT_NAME:stg_ddc_streaming_bot}'
   mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
   groups:
