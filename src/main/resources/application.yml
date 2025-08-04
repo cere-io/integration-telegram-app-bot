@@ -47,11 +47,6 @@ quarkus:
 agent-service:
   bot-name: '${AGENT_SERVICE_BOT_NAME:stg_ddc_streaming_bot}'
   mini-app-name: '${AGENT_SERVICE_MINI_APP_NAME:viewer}'
-  groups:
-    some-group:
-      group-id: '-1002820687645'
-      org-id: '2108'
-      campaign-id: '12'
 
 "%dev":
   quarkus:
