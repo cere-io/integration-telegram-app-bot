@@ -100,7 +100,7 @@ class GroupMessageHandler(
 
         val replyMessageAndProcess = when {
             photo == null -> "Image is too large, the limit is $MAX_IMAGE_SIZE bytes" to false
-            caption.length < 8 -> "Caption is too short" to false
+            caption.length < 3 -> "Caption is too short" to false
             else -> "Your meme is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
         }
 
