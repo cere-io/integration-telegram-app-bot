@@ -33,7 +33,7 @@ quarkus:
       headers:
         Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
     ddc-api:
-      url: '${DDC_API_URL:http://178.18.148.250:9090}'
+      url: '${DDC_HOST}:${DDC_PORT}'
   kotlin-serialization:
     json:
       encode-defaults: false
