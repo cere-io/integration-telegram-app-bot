@@ -14,8 +14,8 @@ quarkus:
       use-separate-server: false
     clients:
       ddc:
-        port: ${DDC_GRPC_PORT:9090}
-        host: ${DDC_GRPC_HOST:178.18.148.250}
+        port: ${DDC_PORT:9090}
+        host: ${DDC_HOST:178.18.148.250}
         use-quarkus-grpc-client: true
         plain-text: true
 
@@ -32,8 +32,6 @@ quarkus:
       url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
       headers:
         Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
-    ddc-api:
-      url: '${DDC_HOST}:${DDC_PORT}'
   kotlin-serialization:
     json:
       encode-defaults: false

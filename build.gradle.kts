@@ -17,14 +17,6 @@ val quarkusPlatformGroupId: String by project
 val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
 
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.bouncycastle") {
-            useVersion("1.78.1")
-        }
-    }
-}
-
 dependencies {
     // BOM
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
