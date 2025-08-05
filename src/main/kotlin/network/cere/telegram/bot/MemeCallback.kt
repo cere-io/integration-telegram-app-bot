@@ -91,7 +91,7 @@ class MemeCallback(
                 else -> error("No image provided")
             }
         } catch (e: Exception) {
-            log.error("Failed to send meme", e)
+            log.error("Failed to send avatar", e)
         }
         return Unit
     }
@@ -101,7 +101,7 @@ class MemeCallback(
             TelegramRequest.SendPhotoRequest(
                 chat_id = ChatId(groupId.toString()),
                 photo = url,
-                caption = "✅ Here is your processed meme!",
+                caption = "✅ Here is your processed avatar!",
                 reply_parameters = ReplyParameters(
                     chat_id = ChatId(groupId.toString()),
                     message_id = MessageId(messageId)
