@@ -5,11 +5,20 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MemeCallbackRequest(
+    @SerialName("user_id")
+    val userId: Long,
+
     @SerialName("group_id")
     val groupId: Long,
 
     @SerialName("message_id")
     val messageId: Long,
+
+    @SerialName("prompt")
+    val prompt: String,
+
+    @SerialName("model")
+    val model: String,
 
     @SerialName("image_url")
     val imageUrl: String? = null,

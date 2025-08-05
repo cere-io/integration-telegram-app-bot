@@ -105,6 +105,11 @@ class GroupMessageHandler(
         }
 
         val chatId = requireNotNull(update.message?.chat?.id)
+        val sender = requireNotNull(update.message?.from)
+        val senderId = sender.id.longValue
+        val senderName = sender.username ?: listOfNotNull(sender.first_name, sender.last_name).joinToString(" ")
+
+        val senderInfo = SenderInfo(id = senderId, name = senderName)
         TelegramRequest.SendMessageRequest(
             chat_id = chatId,
             text = replyMessageAndProcess.first,
@@ -156,6 +161,7 @@ class GroupMessageHandler(
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageCid = imageCid,
                     prompt = caption,
+                    senderInfo = senderInfo,
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
