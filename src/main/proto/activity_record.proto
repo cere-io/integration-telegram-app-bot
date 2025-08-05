@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package pb;
+
+option java_multiple_files = true;
+option java_package = "io.cere.etl";
+
+import "auth_token.proto";
+import "common/signature.proto";
+
+message ActivityRecord {
+  bytes id = 1;
+  ActivityFulfillment upstream = 2;
+  repeated ActivityFulfillment downstream = 3;
+  uint64 timestamp = 4;
+  common.Signature signature = 5;
+  optional AuthToken authToken = 6; // set to authorize record in case if owner delegated access to bucket
+}
+
+message ActivityRequest {
+  optional ActivityRequest parentRequest = 1;
+  string requestId = 2;
+
+  enum RequestType {
+    REQUEST_TYPE_PUT = 0;
+    REQUEST_TYPE_GET = 1;
+    REQUEST_TYPE_DELETE = 2;
+  }
+
+  enum ContentType {
+    CONTENT_TYPE_PIECE = 0;
+    CONTENT_TYPE_SEGMENT = 1;
+    CONTENT_TYPE_MERKLE_TREE = 2;
+    CONTENT_TYPE_METADATA = 3;
+  }
+
+  RequestType requestType = 3;
+  ContentType contentType = 4;
+  uint64 bucketId = 5; // set only when content type is PIECE
+  bytes pieceCid = 6;
+
+  uint64 offset = 7; // offset of data requested (set only when RecordType = GET)
+  uint64 size = 8; // size of content stored or delivered
+
+  uint64 timestamp = 9;
+  common.Signature signature = 10;
+}
+
+// we will get this on the server side streaming
+
+message ActivityAcknowledgment {
+  string requestId = 1;
+  uint64 bytesStoredOrDelivered = 2;
+  uint64 timestamp = 3;
+  common.Signature signature = 4;
+}
+
+message ActivityResponse {
+  Status status = 1;
+  uint32 time = 2; // response time measured by client (start before the request sent and end after the response received)
+  bytes peerID = 3;
+
+  enum Status {
+    UNKNOWN = 0;
+    OK = 1;
+    NOT_FOUND = 2; // server doesn't have requested resource (e.g. node could miss piece metadata)
+    INTERNAL = 3; // error in a server response
+    UNAVAILABLE = 4; // no response from server
+    ABORTED = 5; // request aborted by a client (e.g. storage node asked for piece metadata a node, but after some time had to initialise parallel request to other node and one of the requests can be aborted once metadata received)
+  }
+}
+
+message ActivityFulfillment {
+  ActivityRequest request = 1;
+  optional ActivityAcknowledgment ack = 2;
+  optional ActivityResponse response = 3;
+}
