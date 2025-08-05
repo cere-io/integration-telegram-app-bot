@@ -1,7 +1,7 @@
 ddc:
   bucket: '${DDC_BUCKET}'
   mnemonic: '${DDC_MNEMONIC}'
-  cdn-url: '${DDC_CDN_URL:https://cdn.testnet.cere.network}'
+  cdnUrl: '${DDC_CDN_URL:https://cdn.testnet.cere.network}'
 
 quarkus:
   cache:

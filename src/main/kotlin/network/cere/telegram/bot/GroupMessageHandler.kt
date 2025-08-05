@@ -10,7 +10,6 @@ import kotlinx.serialization.json.encodeToJsonElement
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
-import java.net.URI
 
 @ApplicationScoped
 class GroupMessageHandler(
@@ -21,6 +20,8 @@ class GroupMessageHandler(
     private val config: Config,
     private val signer: Signer,
     @ConfigProperty(name = "telegram.webhook.url") webhookUrl: String,
+    @ConfigProperty(name = "ddc.cdnUrl") cdnUrl: String,
+    @ConfigProperty(name = "ddc.bucket") bucket: String,
     private val ddcService: DdcService,
     @RestClient private val botFileApi: BotFileApi,
 ) {
@@ -29,13 +30,14 @@ class GroupMessageHandler(
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
         private const val GENERATE_COMMAND = "/generate"
-        private const val MAX_IMAGE_SIZE = 50 * 1024
+        private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
+        private const val MIN_CAPTION_LENGTH = 3
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
-    private val botFileUrl = "https://${URI.create(webhookUrl).host}/file/"
+    private val ddcFileUrl = "${cdnUrl}/${bucket}/"
 
     fun handle(update: Update) {
         val message = update.message ?: return
@@ -100,7 +102,7 @@ class GroupMessageHandler(
 
         val replyMessageAndProcess = when {
             photo == null -> "Image is too large, the limit is $MAX_IMAGE_SIZE bytes" to false
-            caption.length < 3 -> "Caption is too short" to false
+            caption.length < MIN_CAPTION_LENGTH -> "Caption is too short" to false
             else -> "Your meme is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
         }
 
@@ -154,7 +156,7 @@ class GroupMessageHandler(
                     campaignId = groupConfig.campaignId(),
                     groupId = requireNotNull(chatId.longValue),
                     messageId = requireNotNull(update.message?.message_id).longValue,
-                    imageCid = imageCid,
+                    imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),

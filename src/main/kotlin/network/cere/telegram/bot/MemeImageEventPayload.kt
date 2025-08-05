@@ -17,8 +17,8 @@ data class MemeImageEventPayload(
     @SerialName("message_id")
     val messageId: Long,
 
-    @SerialName("image_cid")
-    val imageCid: String,
+    @SerialName("image_url")
+    val imageUrl: String,
 
     val prompt: String,
 )

@@ -44,7 +44,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
     // Crypto
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("org.bouncycastle:bcprov-jdk18on")
     implementation("com.github.cerebellum-network:ddc-encryption-impl-kotlin:1.5.0")
     implementation("org.purejava:tweetnacl-java:1.1.2")
     implementation("org.bitcoinj:bitcoinj-core:0.15.10")
