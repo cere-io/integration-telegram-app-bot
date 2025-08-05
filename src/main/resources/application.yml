@@ -1,11 +1,29 @@
+ddc:
+  bucket: '${DDC_BUCKET}'
+  mnemonic: '${DDC_MNEMONIC}'
+  cdnUrl: '${DDC_CDN_URL:https://cdn.testnet.cere.network}'
+
 quarkus:
   cache:
     caffeine:
       initial-capacity: 1000
       maximum-size: 10000
+  
+  grpc:
+    server:
+      use-separate-server: false
+    clients:
+      ddc:
+        port: ${DDC_PORT:9090}
+        host: ${DDC_HOST:178.18.148.250}
+        use-quarkus-grpc-client: true
+        plain-text: true
+
   rest-client:
     tg-bot-api:
       url: 'https://api.telegram.org/bot${telegram.bot.token}'
+    tg-file-api:
+      url: 'https://api.telegram.org/file/bot${telegram.bot.token}'
     compute-engine:
       url: '${compute-engine.url}'
     cere-wallet:
@@ -18,6 +36,7 @@ quarkus:
     json:
       encode-defaults: false
       ignore-unknown-keys: true
+
   http:
     cors:
       ~: true

@@ -2,12 +2,13 @@ package network.cere.telegram.bot
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import java.time.Instant
 import java.util.*
 
 @Serializable
 data class Event(
-    val payload: EventPayload,
+    val payload: JsonElement,
 
     @SerialName("app_id")
     val appId: String,

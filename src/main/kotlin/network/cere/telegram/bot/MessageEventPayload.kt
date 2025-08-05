@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class EventPayload(
+data class MessageEventPayload(
     @SerialName("organization_id")
     val orgId: Int,
 
