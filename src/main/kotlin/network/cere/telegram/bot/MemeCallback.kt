@@ -45,6 +45,7 @@ class MemeCallback(
             val imageUrl = rq.imageUrl
             val imageCid = rq.imageCid
             val imageBase64 = rq.imageBase64
+            val boost = rq.boost
             when {
                 rq.imageUrl != null     -> sendPhoto(chatId.longValue, rq.messageId, imageUrl!!)
                 rq.imageCid != null     -> sendPhoto(chatId.longValue, rq.messageId, "$ddcFileUrl${imageCid}")
@@ -71,6 +72,7 @@ class MemeCallback(
                             cid,
                             null,
                             prompt,
+                            boost = boost ?: false,
                         ).let(json::encodeToJsonElement),
                         appId = config.appId(),
                         accountId = wallet.accountId,

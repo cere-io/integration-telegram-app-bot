@@ -33,6 +33,8 @@ data class MemeCallbackRequest(
     val imageBase64: String? = null, // Base64 encoded image data
 
     val prompt: String,
+
+    val boost: Boolean? = false,
 ) {
     init {
         require(imageUrl != null || imageCid != null || imageBase64 != null) {
