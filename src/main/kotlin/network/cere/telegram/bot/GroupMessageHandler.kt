@@ -16,6 +16,7 @@ class GroupMessageHandler(
     @RestClient private val computeEngineClient: ComputeEngineClient,
     @RestClient private val cereWalletClient: CereWalletClient,
     @RestClient private val botApi: BotApi,
+    @RestClient private val ruleServiceClient: RuleServiceClient,
     private val json: Json,
     private val config: Config,
     private val signer: Signer,
@@ -30,6 +31,7 @@ class GroupMessageHandler(
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
         private const val MEME_HASH_TAG = "#meme"
         private const val GENERATE_COMMAND = "/generate"
+        private const val AVATAR_COMMAND = "/avatar"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
         private const val MIN_CAPTION_LENGTH = 3
     }
@@ -55,6 +57,10 @@ class GroupMessageHandler(
         }
         if (shouldProcessImageGeneration(message)) {
             handleImageForMeme(update)
+        }
+        
+        if (message.text?.startsWith(AVATAR_COMMAND) == true) {
+            handleAvatarCommand(update)
         }
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
@@ -150,6 +156,8 @@ class GroupMessageHandler(
                 return
             }
 
+            val userName = update.message?.from?.username ?: "${update.message?.from?.first_name ?: ""} ${update.message?.from?.last_name ?: ""}".trim()
+
             val event = Event(
                 payload = MemeImageEventPayload(
                     orgId = groupConfig.orgId(),
@@ -158,6 +166,8 @@ class GroupMessageHandler(
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
+                    userId = requireNotNull(update.message?.from?.id).longValue,
+                    userName = userName
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
@@ -189,6 +199,84 @@ class GroupMessageHandler(
             caption.contains(MEME_HASH_TAG) -> caption.removePrefix(MEME_HASH_TAG).trim()
             caption.startsWith(GENERATE_COMMAND) -> caption.removePrefix(GENERATE_COMMAND).trim()
             else -> caption.trim()
+        }
+    }
+    
+    private fun handleAvatarCommand(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId] ?: return
+        val from = message.from ?: return
+        
+        val chatId = chat.id
+        
+        botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chatId,
+                text = "Uploading your avatar... ⏳",
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chatId
+                )
+            )
+        )
+        
+        try {
+            val avatarParams = AvatarParams(
+                userId = from.id.longValue.toString(),
+                orgId = groupConfig.orgId().toString(),
+                campaignId = groupConfig.campaignId().toString()
+            )
+
+            val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
+            
+            val avatarResponse = ruleServiceClient.getAvatar(config.appId(), avatarWrapper)
+            
+            if (avatarResponse.result.code == "SUCCESS" && avatarResponse.result.data?.success == true) {
+                val avatarInfo = avatarResponse.result.data.data
+
+                avatarInfo?.url?.let {
+                    botApi.sendPhoto(
+                        TelegramRequest.SendPhotoRequest(
+                            chat_id = chatId,
+                            photo = it,
+                            caption = avatarInfo.caption,
+                            reply_parameters = ReplyParameters(
+                                message_id = message.message_id,
+                                chat_id = chatId
+                            )
+                        )
+                    )
+                }
+                
+                log.info("✅ Avatar sent successfully for user ${from.id}")
+            } else {
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chatId,
+                        text = "❌ Failed to get avatar. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chatId
+                        )
+                    )
+                )
+                log.error("❌ Failed to get avatar for user ${from.id}: ${avatarResponse.result.code}")
+            }
+        } catch (e: Exception) {
+            log.error("❌ Error while getting avatar for user ${from.id}", e)
+            
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chatId,
+                    text = "❌ There was an error getting your avatar. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chatId
+                    )
+                )
+            )
         }
     }
 }

@@ -5,6 +5,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MemeImageEventPayload(
+    @SerialName("user_id")
+    val userId: Long,
+
+    @SerialName("username")
+    val userName: String,
+
     @SerialName("organization_id")
     val orgId: Int,
 

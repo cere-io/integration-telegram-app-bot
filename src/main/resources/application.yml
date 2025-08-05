@@ -32,6 +32,8 @@ quarkus:
       url: '${rob.api.url:https://api.rob.stage.cere.io/rms-node-backend}'
       headers:
         Authorization: '${ROB_API_AUTHORIZATION:b8vZS773iCvvinb9cOsJfxW6eWGiIQzl}'
+    rule-service-api:
+      url: '${rule-service.api.url}'
   kotlin-serialization:
     json:
       encode-defaults: false
