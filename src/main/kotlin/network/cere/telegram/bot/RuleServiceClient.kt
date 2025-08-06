@@ -10,7 +10,7 @@ import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
 interface RuleServiceClient {
 
     @POST
-    @Path("/rule/data-service/{dataServiceId}/query/get_avatar")
+    @Path("/data-service/{dataServiceId}/query/get_avatar")
     fun getAvatar(
         @PathParam("dataServiceId") dataServiceId: String,
         request: AvatarRequestWrapper
