@@ -48,7 +48,7 @@ class TelegramWebhook(
                 }
                 in handledTypes -> {
                     val message = update.message
-                    if (message?.text?.startsWith("/") == true ||
+                    if (
                         message?.reply_to_message?.from?.is_bot == true
                     ) {
                         // skip

@@ -5,6 +5,18 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MemeCallbackRequest(
+    @SerialName("user_id")
+    val userId: Long,
+
+    @SerialName("username")
+    val userName: String,
+
+    @SerialName("organization_id")
+    val orgId: Int,
+
+    @SerialName("campaign_id")
+    val campaignId: String,
+
     @SerialName("group_id")
     val groupId: Long,
 
@@ -19,6 +31,10 @@ data class MemeCallbackRequest(
 
     @SerialName("image_base64")
     val imageBase64: String? = null, // Base64 encoded image data
+
+    val prompt: String,
+
+    val boost: Boolean? = false,
 ) {
     init {
         require(imageUrl != null || imageCid != null || imageBase64 != null) {

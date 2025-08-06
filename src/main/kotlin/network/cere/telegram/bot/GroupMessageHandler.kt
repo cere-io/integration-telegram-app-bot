@@ -10,12 +10,14 @@ import kotlinx.serialization.json.encodeToJsonElement
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
+import java.time.Instant
 
 @ApplicationScoped
 class GroupMessageHandler(
     @RestClient private val computeEngineClient: ComputeEngineClient,
     @RestClient private val cereWalletClient: CereWalletClient,
     @RestClient private val botApi: BotApi,
+    @RestClient private val ruleServiceClient: RuleServiceClient,
     private val json: Json,
     private val config: Config,
     private val signer: Signer,
@@ -28,10 +30,16 @@ class GroupMessageHandler(
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
+        private const val EVENT_TYPE_BOOST = "BOOST_EVENT"
         private const val MEME_HASH_TAG = "#meme"
         private const val GENERATE_COMMAND = "/generate"
+        private const val AVATAR_COMMAND = "/avatar"
+        private const val BOOST_COMMAND = "/boost"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
         private const val MIN_CAPTION_LENGTH = 3
+        private const val BOOST_COOLDOWN_HOURS = 24L
+        private const val BOOST_COOLDOWN_MINUTES = 1L
+        private const val MAX_LEVEL = 5
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
@@ -55,6 +63,14 @@ class GroupMessageHandler(
         }
         if (shouldProcessImageGeneration(message)) {
             handleImageForMeme(update)
+        }
+        
+        if (message.text?.startsWith(AVATAR_COMMAND) == true) {
+            handleAvatarCommand(update)
+        }
+
+        if (message.text?.startsWith(BOOST_COMMAND) == true) {
+            handleBoostCommand(update)
         }
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
@@ -103,7 +119,7 @@ class GroupMessageHandler(
         val replyMessageAndProcess = when {
             photo == null -> "Image is too large, the limit is $MAX_IMAGE_SIZE bytes" to false
             caption.length < MIN_CAPTION_LENGTH -> "Caption is too short" to false
-            else -> "Your meme is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
+            else -> "Your avatar is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
         }
 
         val chatId = requireNotNull(update.message?.chat?.id)
@@ -150,6 +166,8 @@ class GroupMessageHandler(
                 return
             }
 
+            val userName = update.message?.from?.username ?: "${update.message?.from?.first_name ?: ""} ${update.message?.from?.last_name ?: ""}".trim()
+
             val event = Event(
                 payload = MemeImageEventPayload(
                     orgId = groupConfig.orgId(),
@@ -158,6 +176,8 @@ class GroupMessageHandler(
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
+                    userId = requireNotNull(update.message?.from?.id).longValue,
+                    userName = userName
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
@@ -189,6 +209,250 @@ class GroupMessageHandler(
             caption.contains(MEME_HASH_TAG) -> caption.removePrefix(MEME_HASH_TAG).trim()
             caption.startsWith(GENERATE_COMMAND) -> caption.removePrefix(GENERATE_COMMAND).trim()
             else -> caption.trim()
+        }
+    }
+    
+    private fun handleAvatarCommand(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId] ?: return
+        val from = message.from ?: return
+        
+        val chatId = chat.id
+        
+        botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chatId,
+                text = "Loading your avatar... ⏳",
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chatId
+                )
+            )
+        )
+        
+        try {
+            val avatarParams = AvatarParams(
+                userId = from.id.longValue.toString(),
+                orgId = groupConfig.orgId().toString(),
+                campaignId = groupConfig.campaignId().toString()
+            )
+
+            val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
+            
+            val avatarResponse = ruleServiceClient.getAvatar(config.appId(), avatarWrapper)
+            
+            if (avatarResponse.result.code == "SUCCESS" && avatarResponse.result.data?.success == true) {
+                val avatarInfo = avatarResponse.result.data.data
+
+                avatarInfo?.url?.let {
+                    botApi.sendPhoto(
+                        TelegramRequest.SendPhotoRequest(
+                            chat_id = chatId,
+                            photo = it,
+                            caption = avatarInfo.caption,
+                            reply_parameters = ReplyParameters(
+                                message_id = message.message_id,
+                                chat_id = chatId
+                            )
+                        )
+                    )
+                }
+                
+                log.info("✅ Avatar sent successfully for user ${from.id}")
+            } else {
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chatId,
+                        text = "❌ Failed to get avatar. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chatId
+                        )
+                    )
+                )
+                log.error("❌ Failed to get avatar for user ${from.id}: ${avatarResponse.result.code}")
+            }
+        } catch (e: Exception) {
+            log.error("❌ Error while getting avatar for user ${from.id}", e)
+            
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chatId,
+                    text = "❌ There was an error getting your avatar. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chatId
+                    )
+                )
+            )
+        }
+    }
+
+    private fun handleBoostCommand(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId] ?: return
+        val from = message.from ?: return
+
+        val chatId = chat.id
+
+        botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chatId,
+                text = "Processing your boost request... ⏳",
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chatId
+                )
+            )
+        )
+
+        try {
+            val avatarParams = AvatarParams(
+                userId = from.id.longValue.toString(),
+                orgId = groupConfig.orgId().toString(),
+                campaignId = groupConfig.campaignId().toString()
+            )
+
+            val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
+            val avatarResponse = ruleServiceClient.getAvatar(config.appId(), avatarWrapper)
+            
+            if (avatarResponse.result.code == "SUCCESS" && avatarResponse.result.data?.success == true) {
+                val avatarInfo = avatarResponse.result.data.data
+                val lastBoostAt = avatarInfo?.last_boost_at
+                val level = avatarInfo?.level ?: 0
+                val now = Instant.now()
+
+                val canBoost = when {
+                    level >= MAX_LEVEL -> {
+                        botApi.sendMessage(
+                            TelegramRequest.SendMessageRequest(
+                                chat_id = chatId,
+                                text = "❌ You've reached the maximum level ($MAX_LEVEL). Cannot boost further.",
+                                reply_parameters = ReplyParameters(
+                                    message_id = message.message_id,
+                                    chat_id = chatId
+                                )
+                            )
+                        )
+                        false
+                    }
+                    lastBoostAt == null -> {
+                        true
+                    }
+                    else -> {
+//                        val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
+                        val minutesSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toMinutes()
+                        if (minutesSinceLastBoost < BOOST_COOLDOWN_MINUTES) {
+                            val remainingHours = BOOST_COOLDOWN_MINUTES - minutesSinceLastBoost
+                            botApi.sendMessage(
+                                TelegramRequest.SendMessageRequest(
+                                    chat_id = chatId,
+                                    text = "⏰ Too early to boost! You need to wait $remainingHours more hours.",
+                                    reply_parameters = ReplyParameters(
+                                        message_id = message.message_id,
+                                        chat_id = chatId
+                                    )
+                                )
+                            )
+                            false
+                        } else if (minutesSinceLastBoost >= BOOST_COOLDOWN_HOURS * 2) {
+                            botApi.sendMessage(
+                                TelegramRequest.SendMessageRequest(
+                                    chat_id = chatId,
+                                    text = "😔 You missed your daily boost! Your level has been reset to 0.",
+                                    reply_parameters = ReplyParameters(
+                                        message_id = message.message_id,
+                                        chat_id = chatId
+                                    )
+                                )
+                            )
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                }
+
+                if (canBoost) {
+                    val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
+                    val userName = from.username ?: "${from.first_name ?: ""} ${from.last_name ?: ""}".trim()
+
+                    val event = Event(
+                        payload = BoostEventPayload(
+                            orgId = groupConfig.orgId(),
+                            campaignId = groupConfig.campaignId(),
+                            groupId = groupId,
+                            messageId = message.message_id.longValue,
+                            userId = from.id.longValue,
+                            userName = userName
+                        ).let(json::encodeToJsonElement),
+                        appId = config.appId(),
+                        accountId = wallet.accountId,
+                        userPubKey = wallet.userPubKey,
+                        dataServicePubKey = signer.publicKey,
+                        signing = byteArrayOf(0x00, 0x01, 0x00).hex(false),
+                        type = EVENT_TYPE_BOOST,
+                    ).sign(signer)
+
+                    runCatching {
+                        computeEngineClient.sendEvent(event)
+                        log.info("✅ Boost event sent successfully for user ${from.id}")
+
+                        botApi.sendMessage(
+                            TelegramRequest.SendMessageRequest(
+                                chat_id = chatId,
+                                text = "🚀 Boost event sent! Your level will be updated shortly.",
+                                reply_parameters = ReplyParameters(
+                                    message_id = message.message_id,
+                                    chat_id = chatId
+                                )
+                            )
+                        )
+                    }.onFailure {
+                        log.error("❌ Failed to send boost event for user ${from.id}", it)
+
+                        botApi.sendMessage(
+                            TelegramRequest.SendMessageRequest(
+                                chat_id = chatId,
+                                text = "❌ Failed to process boost. Please try again later.",
+                                reply_parameters = ReplyParameters(
+                                    message_id = message.message_id,
+                                    chat_id = chatId
+                                )
+                            )
+                        )
+                    }
+                }
+            } else {
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chatId,
+                        text = "❌ Failed to get avatar data. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chatId
+                        )
+                    )
+                )
+                log.error("❌ Failed to get avatar for user ${from.id}: ${avatarResponse.result.code}")
+            }
+        } catch (e: Exception) {
+            log.error("❌ Error while processing boost for user ${from.id}", e)
+            
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chatId,
+                    text = "❌ There was an error processing your boost. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chatId
+                    )
+                )
+            )
         }
     }
 }

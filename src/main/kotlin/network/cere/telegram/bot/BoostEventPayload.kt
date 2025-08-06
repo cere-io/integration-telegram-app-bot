@@ -4,13 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MemeImageEventPayload(
-    @SerialName("user_id")
-    val userId: Long,
-
-    @SerialName("username")
-    val userName: String,
-
+data class BoostEventPayload(
     @SerialName("organization_id")
     val orgId: Int,
 
@@ -23,8 +17,9 @@ data class MemeImageEventPayload(
     @SerialName("message_id")
     val messageId: Long,
 
-    @SerialName("image_url")
-    val imageUrl: String,
+    @SerialName("user_id")
+    val userId: Long,
 
-    val prompt: String,
+    @SerialName("username")
+    val userName: String,
 )
