@@ -26,6 +26,8 @@ class GroupMessageHandler(
     @ConfigProperty(name = "ddc.bucket") bucket: String,
     private val ddcService: DdcService,
     @RestClient private val botFileApi: BotFileApi,
+    private val rateLimitService: RateLimitService,
+    private val campaignChatCacheService: CampaignChatCacheService
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
@@ -37,23 +39,20 @@ class GroupMessageHandler(
         private const val BOOST_COMMAND = "/boost"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
         private const val MIN_CAPTION_LENGTH = 3
-        private const val BOOST_COOLDOWN_HOURS = 24L
-        private const val BOOST_COOLDOWN_MINUTES = 1L
         private const val MAX_LEVEL = 5
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
     private val ddcFileUrl = "${cdnUrl}/${bucket}/"
 
     fun handle(update: Update) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs[groupId]
-        if (groupConfig == null) {
-            log.warn("Group {} with id {} not configured for message onboarding", chat.title, groupId)
+        val campaignContext = campaignChatCacheService.getCampaignContextByChatId(groupId)
+        if (campaignContext == null) {
+            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
             return
         }
         val from = message.from
@@ -61,6 +60,24 @@ class GroupMessageHandler(
             log.warn("Unable to identify message author")
             return
         }
+        
+        if (!rateLimitService.canMakeChannelRequest(groupId, campaignContext.challengeSettings)) {
+            log.warn("Rate limit exceeded for group $groupId")
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "⚠️ Too many requests from this channel. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+        
+        rateLimitService.recordChannelRequest(groupId)
+        
         if (shouldProcessImageGeneration(message)) {
             handleImageForMeme(update)
         }
@@ -75,8 +92,8 @@ class GroupMessageHandler(
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
             payload = MessageEventPayload(
-                orgId = groupConfig.orgId(),
-                campaignId = groupConfig.campaignId(),
+                orgId = campaignContext.orgId.toInt(),
+                campaignId = campaignContext.campaignId.toString(),
                 groupId = groupId,
                 messageId = message.message_id.longValue,
                 dateUnixTime = message.date,
@@ -109,6 +126,33 @@ class GroupMessageHandler(
     }
 
     private fun handleImageForMeme(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
+        
+        if (campaignCtx == null) {
+            log.warn("Channel $groupId not associated with any campaign")
+            return
+        }
+        
+        val from = message.from ?: return
+        val userId = from.id.longValue
+        
+        if (!rateLimitService.canGenerateImage(userId, campaignCtx.challengeSettings)) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "You can only generate a new aura infused avatar every ${campaignCtx.challengeSettings.maxImageGenerationPerDay}h.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+        
         val photo = requireNotNull(update.message?.photo)
             .filter { it.file_size != null }
             .sortedByDescending { it.file_size }
@@ -117,8 +161,8 @@ class GroupMessageHandler(
         log.info("Image received {} {}", photo, caption)
 
         val replyMessageAndProcess = when {
-            photo == null -> "Image is too large, the limit is $MAX_IMAGE_SIZE bytes" to false
-            caption.length < MIN_CAPTION_LENGTH -> "Caption is too short" to false
+            photo == null -> "You forget to attach an image. The command /generate can only work if you attach your avatar/pfp image following by #<aura type> . For a list of Aura filters, type /aura ." to false
+            caption.length < MIN_CAPTION_LENGTH -> "You select your aura type by adding a #<aura type e.g. #fire . For a list of Aura filters, type /aura ." to false
             else -> "Your avatar is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
         }
 
@@ -133,9 +177,10 @@ class GroupMessageHandler(
         ).also(botApi::sendMessage)
 
         if (replyMessageAndProcess.second) {
+            rateLimitService.recordImageGeneration(userId)
+            
             val wallet =
                 cereWalletClient.walletByTelegramUserId(requireNotNull(update.message?.from?.id?.longValue)).data
-            val groupConfig = groupConfigs.getValue(chatId.longValue)
 
             // Download image from Telegram and upload to DDC
             val imageCid = try {
@@ -170,8 +215,8 @@ class GroupMessageHandler(
 
             val event = Event(
                 payload = MemeImageEventPayload(
-                    orgId = groupConfig.orgId(),
-                    campaignId = groupConfig.campaignId(),
+                    orgId = campaignCtx.orgId.toInt(),
+                    campaignId = campaignCtx.campaignId.toString(),
                     groupId = requireNotNull(chatId.longValue),
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageUrl = "$ddcFileUrl${imageCid}",
@@ -216,7 +261,13 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs[groupId] ?: return
+        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
+
+        if (campaignCtx == null) {
+            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+            return
+        }
+
         val from = message.from ?: return
         
         val chatId = chat.id
@@ -235,8 +286,8 @@ class GroupMessageHandler(
         try {
             val avatarParams = AvatarParams(
                 userId = from.id.longValue.toString(),
-                orgId = groupConfig.orgId().toString(),
-                campaignId = groupConfig.campaignId().toString()
+                orgId = campaignCtx.orgId.toString(),
+                campaignId = campaignCtx.campaignId.toString()
             )
 
             val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
@@ -294,8 +345,29 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs[groupId] ?: return
+        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
+
+        if (campaignCtx == null) {
+            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+            return
+        }
+
         val from = message.from ?: return
+        val userId = from.id.longValue
+
+        if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.maxBoostPerDay}h . The maximum level is 5.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
 
         val chatId = chat.id
 
@@ -313,8 +385,8 @@ class GroupMessageHandler(
         try {
             val avatarParams = AvatarParams(
                 userId = from.id.longValue.toString(),
-                orgId = groupConfig.orgId().toString(),
-                campaignId = groupConfig.campaignId().toString()
+                orgId = campaignCtx.orgId.toString(),
+                campaignId = campaignCtx.campaignId.toString()
             )
 
             val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
@@ -325,13 +397,14 @@ class GroupMessageHandler(
                 val lastBoostAt = avatarInfo?.last_boost_at
                 val level = avatarInfo?.level ?: 0
                 val now = Instant.now()
+                val cooldownHours = campaignCtx.challengeSettings.cooldownHours.toLong()
 
                 val canBoost = when {
                     level >= MAX_LEVEL -> {
                         botApi.sendMessage(
                             TelegramRequest.SendMessageRequest(
                                 chat_id = chatId,
-                                text = "❌ You've reached the maximum level ($MAX_LEVEL). Cannot boost further.",
+                                text = "Congratulations! You have reached a state of enlightenment by reaching aura level 5! To remain at level, you'll have to continue to meditate daily. If you miss a day, your aura will reset!",
                                 reply_parameters = ReplyParameters(
                                     message_id = message.message_id,
                                     chat_id = chatId
@@ -344,10 +417,9 @@ class GroupMessageHandler(
                         true
                     }
                     else -> {
-//                        val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
-                        val minutesSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toMinutes()
-                        if (minutesSinceLastBoost < BOOST_COOLDOWN_MINUTES) {
-                            val remainingHours = BOOST_COOLDOWN_MINUTES - minutesSinceLastBoost
+                        val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
+                        if (hoursSinceLastBoost < cooldownHours) {
+                            val remainingHours = cooldownHours - hoursSinceLastBoost
                             botApi.sendMessage(
                                 TelegramRequest.SendMessageRequest(
                                     chat_id = chatId,
@@ -359,7 +431,7 @@ class GroupMessageHandler(
                                 )
                             )
                             false
-                        } else if (minutesSinceLastBoost >= BOOST_COOLDOWN_HOURS * 2) {
+                        } else if (hoursSinceLastBoost >= cooldownHours * 2) {
                             botApi.sendMessage(
                                 TelegramRequest.SendMessageRequest(
                                     chat_id = chatId,
@@ -378,13 +450,15 @@ class GroupMessageHandler(
                 }
 
                 if (canBoost) {
+                    rateLimitService.recordBoost(userId)
+                    
                     val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
                     val userName = from.username ?: "${from.first_name ?: ""} ${from.last_name ?: ""}".trim()
 
                     val event = Event(
                         payload = BoostEventPayload(
-                            orgId = groupConfig.orgId(),
-                            campaignId = groupConfig.campaignId(),
+                            orgId = campaignCtx.orgId.toInt(),
+                            campaignId = campaignCtx.campaignId.toString(),
                             groupId = groupId,
                             messageId = message.message_id.longValue,
                             userId = from.id.longValue,

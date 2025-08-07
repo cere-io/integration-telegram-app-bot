@@ -24,4 +24,8 @@ interface BotApi {
     @POST
     @Path("sendPhoto")
     fun sendPhoto(rq: TelegramRequest.SendPhotoRequest)
+    
+    @POST
+    @Path("getChat")
+    fun getChat(rq: TelegramRequest.GetChatRequest): String
 }
