@@ -143,7 +143,7 @@ class GroupMessageHandler(
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "You can only generate a new aura infused avatar every ${campaignCtx.challengeSettings.maxImageGenerationPerDay}h.",
+                    text = "You can only generate a new aura infused avatar every ${campaignCtx.challengeSettings.cooldownHours}h.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -355,20 +355,6 @@ class GroupMessageHandler(
         val from = message.from ?: return
         val userId = from.id.longValue
 
-        if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
-            botApi.sendMessage(
-                TelegramRequest.SendMessageRequest(
-                    chat_id = chat.id,
-                    text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.maxBoostPerDay}h . The maximum level is 5.",
-                    reply_parameters = ReplyParameters(
-                        message_id = message.message_id,
-                        chat_id = chat.id
-                    )
-                )
-            )
-            return
-        }
-
         val chatId = chat.id
 
         botApi.sendMessage(
@@ -414,7 +400,21 @@ class GroupMessageHandler(
                         false
                     }
                     lastBoostAt == null -> {
-                        true
+                        if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
+                            botApi.sendMessage(
+                                TelegramRequest.SendMessageRequest(
+                                    chat_id = chatId,
+                                    text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.cooldownHours}. The maximum level is 5.",
+                                    reply_parameters = ReplyParameters(
+                                        message_id = message.message_id,
+                                        chat_id = chatId
+                                    )
+                                )
+                            )
+                            false
+                        } else {
+                            true
+                        }
                     }
                     else -> {
                         val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
@@ -444,7 +444,21 @@ class GroupMessageHandler(
                             )
                             false
                         } else {
-                            true
+                            if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
+                                botApi.sendMessage(
+                                    TelegramRequest.SendMessageRequest(
+                                        chat_id = chatId,
+                                        text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.cooldownHours}h. The maximum level is 5.",
+                                        reply_parameters = ReplyParameters(
+                                            message_id = message.message_id,
+                                            chat_id = chatId
+                                        )
+                                    )
+                                )
+                                false
+                            } else {
+                                true
+                            }
                         }
                     }
                 }
