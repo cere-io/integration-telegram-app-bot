@@ -385,8 +385,11 @@ class GroupMessageHandler(
                 val now = Instant.now()
                 val cooldownHours = campaignCtx.challengeSettings.cooldownHours.toLong()
 
+                log.info("Boost check for user $userId: lastBoostAt=$lastBoostAt, level=$level, cooldownHours=$cooldownHours")
+
                 val canBoost = when {
                     level >= MAX_LEVEL -> {
+                        log.info("User $userId reached max level $level")
                         botApi.sendMessage(
                             TelegramRequest.SendMessageRequest(
                                 chat_id = chatId,
@@ -399,43 +402,13 @@ class GroupMessageHandler(
                         )
                         false
                     }
-                    lastBoostAt == null -> {
-                        if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
-                            botApi.sendMessage(
-                                TelegramRequest.SendMessageRequest(
-                                    chat_id = chatId,
-                                    text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.cooldownHours}. The maximum level is 5.",
-                                    reply_parameters = ReplyParameters(
-                                        message_id = message.message_id,
-                                        chat_id = chatId
-                                    )
-                                )
-                            )
-                            false
-                        } else {
-                            true
-                        }
-                    }
                     else -> {
-                        val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
-                        if (hoursSinceLastBoost < cooldownHours) {
-                            val remainingHours = cooldownHours - hoursSinceLastBoost
+                        if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
+                            log.info("User $userId rate limit exceeded for boost")
                             botApi.sendMessage(
                                 TelegramRequest.SendMessageRequest(
                                     chat_id = chatId,
-                                    text = "⏰ Too early to boost! You need to wait $remainingHours more hours.",
-                                    reply_parameters = ReplyParameters(
-                                        message_id = message.message_id,
-                                        chat_id = chatId
-                                    )
-                                )
-                            )
-                            false
-                        } else if (hoursSinceLastBoost >= cooldownHours * 2) {
-                            botApi.sendMessage(
-                                TelegramRequest.SendMessageRequest(
-                                    chat_id = chatId,
-                                    text = "😔 You missed your daily boost! Your level has been reset to 0.",
+                                    text = "You can only meditate and boost your aura to the next level every 24h. The maximum level is 5.",
                                     reply_parameters = ReplyParameters(
                                         message_id = message.message_id,
                                         chat_id = chatId
@@ -444,21 +417,8 @@ class GroupMessageHandler(
                             )
                             false
                         } else {
-                            if (!rateLimitService.canBoost(userId, campaignCtx.challengeSettings)) {
-                                botApi.sendMessage(
-                                    TelegramRequest.SendMessageRequest(
-                                        chat_id = chatId,
-                                        text = "You can only meditate and boost your aura to the next level every ${campaignCtx.challengeSettings.cooldownHours}h. The maximum level is 5.",
-                                        reply_parameters = ReplyParameters(
-                                            message_id = message.message_id,
-                                            chat_id = chatId
-                                        )
-                                    )
-                                )
-                                false
-                            } else {
-                                true
-                            }
+                            log.info("User $userId can boost")
+                            true
                         }
                     }
                 }
