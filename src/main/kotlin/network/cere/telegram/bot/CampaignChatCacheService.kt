@@ -79,11 +79,31 @@ class CampaignChatCacheService(
             val maxBoost = challengeSettingsObj?.get("maxBoostPerDay")?.jsonPrimitive?.intOrNull ?: 1
             val maxChannelRequestsPerDay = challengeSettingsObj?.get("maxChannelRequestsPerDay")?.jsonPrimitive?.intOrNull ?: 1000
 
+            // Extract prompt tags
+            val promptTagsArray = challengeSettingsObj?.get("promptTags")?.jsonArray
+            val promptTags = if (promptTagsArray != null) {
+                promptTagsArray.mapNotNull { element ->
+                    if (element is JsonObject) {
+                        val tag = element["tag"]?.jsonPrimitive?.content
+                        val prompt = element["prompt"]?.jsonPrimitive?.content
+                        if (tag != null && prompt != null) {
+                            PromptTag(tag, prompt)
+                        } else null
+                    } else null
+                }
+            } else {
+                listOf(
+                    PromptTag("fire", "anime-style portrait of a man in a tuxedo with a blazing fire aura behind him, surrounded by heat waves and glowing embers, dramatic lighting, fiery background, highly detailed, cinematic look"),
+                    PromptTag("ice", "anime-style portrait of a man in a tuxedo with a glowing icy aura behind him, surrounded by cold mist and blue light, dramatic lighting, frozen background, highly detailed, cinematic look")
+                )
+            }
+
             val challengeSettings = ChallengeSettings(
                 cooldownHours = cooldown,
                 maxImageGenerationPerDay = maxImageGeneration,
                 maxBoostPerDay = maxBoost,
                 maxChannelRequestsPerDay = maxChannelRequestsPerDay,
+                promptTags = promptTags
             )
 
             return when (chatField) {
@@ -126,6 +146,10 @@ class CampaignChatCacheService(
         val maxImageGenerationPerDay: Int = 1,
         val maxBoostPerDay: Int = 1,
         val maxChannelRequestsPerDay: Int = 1000,
+        val promptTags: List<PromptTag> = listOf(
+            PromptTag("fire", "anime-style portrait of a man in a tuxedo with a blazing fire aura behind him, surrounded by heat waves and glowing embers, dramatic lighting, fiery background, highly detailed, cinematic look"),
+            PromptTag("ice", "anime-style portrait of a man in a tuxedo with a glowing icy aura behind him, surrounded by cold mist and blue light, dramatic lighting, frozen background, highly detailed, cinematic look")
+        )
     )
 
     data class ChatChallengeConfig(

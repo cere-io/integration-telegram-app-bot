@@ -222,7 +222,8 @@ class GroupMessageHandler(
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
                     userId = requireNotNull(update.message?.from?.id).longValue,
-                    userName = userName
+                    userName = userName,
+                    promptTags = campaignCtx.challengeSettings.promptTags
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
