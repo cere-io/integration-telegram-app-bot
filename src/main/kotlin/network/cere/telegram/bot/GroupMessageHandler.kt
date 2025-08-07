@@ -4,6 +4,7 @@ import com.github.omarmiatello.telegram.ReplyParameters
 import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
+import com.github.omarmiatello.telegram.ParseMode
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
@@ -37,6 +38,8 @@ class GroupMessageHandler(
         private const val GENERATE_COMMAND = "/generate"
         private const val AVATAR_COMMAND = "/avatar"
         private const val BOOST_COMMAND = "/boost"
+        private const val AURA_COMMAND = "/aura"
+        private const val HELP_COMMAND = "/help"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
         private const val MIN_CAPTION_LENGTH = 3
         private const val MAX_LEVEL = 5
@@ -88,6 +91,14 @@ class GroupMessageHandler(
 
         if (message.text?.startsWith(BOOST_COMMAND) == true) {
             handleBoostCommand(update)
+        }
+
+        if (message.text?.startsWith(AURA_COMMAND) == true) {
+            handleAuraCommand(update)
+        }
+
+        if (message.text?.startsWith(HELP_COMMAND) == true) {
+            handleHelpCommand(update)
         }
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
@@ -503,5 +514,102 @@ class GroupMessageHandler(
                 )
             )
         }
+    }
+
+    private fun handleAuraCommand(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
+
+        if (campaignCtx == null) {
+            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+            return
+        }
+
+        val chatId = chat.id
+        
+        val auraTypes = campaignCtx.challengeSettings.promptTags
+        val auraList = if (auraTypes.isNotEmpty()) {
+            auraTypes.joinToString("\n") { "• #${it.tag}" }
+        } else {
+            "• #fire\n• #ice"
+        }
+        
+        val responseText = """
+🔥 **Available Aura Types** 🔥
+
+$auraList
+
+To use an aura, attach your avatar image with a caption like:
+`/generate #fire` or `#ice`
+
+Example: Send a photo with caption /generate "#fire" to get a fire aura!
+        """.trimIndent()
+
+        botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chatId,
+                text = responseText,
+                parse_mode = ParseMode.Markdown,
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chatId
+                )
+            )
+        )
+    }
+
+    private fun handleHelpCommand(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
+
+        if (campaignCtx == null) {
+            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+            return
+        }
+
+        val chatId = chat.id
+        
+        val responseText = """
+🎮 **Bot Commands & Game Dynamics** 🎮
+
+**Commands:**
+• `/aura` - Lists all available aura types
+• `/avatar` - Shows your current avatar
+• `/boost` - Boost your aura level (once per ${campaignCtx.challengeSettings.cooldownHours}h)
+• `/help` - Shows this help message
+
+**Game Dynamics:**
+• **Aura Generation**: Send a photo with `/generate #<aura_type>` to generate an aura-infused avatar
+• **Level System**: Boost your aura level up to level 5
+• **Cooldowns**: 
+  - Avatar generation: every ${campaignCtx.challengeSettings.cooldownHours}h
+  - Boost: every ${campaignCtx.challengeSettings.cooldownHours}h
+• **Max Level**: Reach level 5 for enlightenment!
+
+**How to Play:**
+1. Use `/aura` to see available aura types
+2. Send a photo with `/generate` `#fire` or `#ice` to generate your aura
+3. Use `/boost` to level up your aura
+4. Use `/avatar` to see your current avatar
+5. Stay active to maintain your level!
+
+For aura types, type `/aura` 🔥
+        """.trimIndent()
+
+        botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chatId,
+                text = responseText,
+                parse_mode = ParseMode.Markdown,
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chatId
+                )
+            )
+        )
     }
 }
