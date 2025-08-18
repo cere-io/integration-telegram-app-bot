@@ -14,7 +14,7 @@ class CampaignChatCacheService(
     private val log = LoggerFactory.getLogger(javaClass)
     private var cache: Map<Long, CampaignContext> = emptyMap()
     private var lastUpdated: Instant = Instant.EPOCH
-    private val cacheDuration = java.time.Duration.ofMinutes(2)
+    private val cacheDuration = java.time.Duration.ofMinutes(1)
 
 
     fun getCampaignContextByChatId(chatId: Long): CampaignContext? {
