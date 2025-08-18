@@ -38,7 +38,7 @@ class GroupMessageHandler(
         private const val GENERATE_COMMAND = "/generate"
         private const val AVATAR_COMMAND = "/avatar"
         private const val BOOST_COMMAND = "/boost"
-        private const val AURA_COMMAND = "/aura"
+        private const val FILTERS_COMMAND = "/filters"
         private const val HELP_COMMAND = "/help"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
         private const val MIN_CAPTION_LENGTH = 3
@@ -93,8 +93,8 @@ class GroupMessageHandler(
             handleBoostCommand(update)
         }
 
-        if (message.text?.startsWith(AURA_COMMAND) == true) {
-            handleAuraCommand(update)
+        if (message.text?.startsWith(FILTERS_COMMAND) == true) {
+            handleFiltersCommand(update)
         }
 
         if (message.text?.startsWith(HELP_COMMAND) == true) {
@@ -516,7 +516,7 @@ class GroupMessageHandler(
         }
     }
 
-    private fun handleAuraCommand(update: Update) {
+    private fun handleFiltersCommand(update: Update) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
@@ -537,14 +537,14 @@ class GroupMessageHandler(
         }
         
         val responseText = """
-🔥 **Available Aura Types** 🔥
+🔥 **Available Image Filters** 🔥
 
 $auraList
 
-To use an aura, attach your avatar image with a caption like:
+To use an image filter, attach your image with a caption like:
 `/generate #fire` or `#ice`
 
-Example: Send a photo with caption /generate "#fire" to get a fire aura!
+Example: Send a photo with caption /generate "#fire" to get a fire image!
         """.trimIndent()
 
         botApi.sendMessage(
@@ -572,33 +572,19 @@ Example: Send a photo with caption /generate "#fire" to get a fire aura!
         }
 
         val chatId = chat.id
-        
-        val responseText = """
-🎮 **Bot Commands & Game Dynamics** 🎮
 
-**Commands:**
-• `/aura` - Lists all available aura types
-• `/avatar` - Shows your current avatar
-• `/boost` - Boost your aura level (once per ${campaignCtx.challengeSettings.cooldownHours}h)
+        val responseText = """
+🎮 **Bot Commands** 🎮
+
+**Available Commands:**
+• `/generate` - Apply a filter to the image you attach
+• `/filters` - Lists all available aura types
 • `/help` - Shows this help message
 
-**Game Dynamics:**
-• **Aura Generation**: Send a photo with `/generate #<aura_type>` to generate an aura-infused avatar
-• **Level System**: Boost your aura level up to level 5
-• **Cooldowns**: 
-  - Avatar generation: every ${campaignCtx.challengeSettings.cooldownHours}h
-  - Boost: every ${campaignCtx.challengeSettings.cooldownHours}h
-• **Max Level**: Reach level 5 for enlightenment!
-
-**How to Play:**
-1. Use `/aura` to see available aura types
-2. Send a photo with `/generate` `#fire` or `#ice` to generate your aura
-3. Use `/boost` to level up your aura
-4. Use `/avatar` to see your current avatar
-5. Stay active to maintain your level!
-
-For aura types, type `/aura` 🔥
-        """.trimIndent()
+**How to use the bot:**
+• **Image Generation:** Send a photo with the text `/generate` `#<filter>` to generate a new image  
+• **Cooldowns:** 1 image generation every ${campaignCtx.challengeSettings.cooldownHours}h
+""".trimIndent()
 
         botApi.sendMessage(
             TelegramRequest.SendMessageRequest(

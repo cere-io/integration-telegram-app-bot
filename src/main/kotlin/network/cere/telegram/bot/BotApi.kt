@@ -28,4 +28,8 @@ interface BotApi {
     @POST
     @Path("getChat")
     fun getChat(rq: TelegramRequest.GetChatRequest): String
+
+    @POST
+    @Path("setMyCommands")
+    fun setMyCommands(rq: TelegramRequest.SetMyCommandsRequest): TelegramResponse<Boolean>
 }
