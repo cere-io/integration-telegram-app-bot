@@ -285,7 +285,7 @@ class GroupMessageHandler(
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "⚠️ You can only use /fun once every ${campaignCtx.challengeSettings.cooldownHours} hours.",
+                    text = "⚠️ You can only use /fun once every ${campaignCtx.challengeSettings.cooldownHours} h.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -301,11 +301,11 @@ class GroupMessageHandler(
         val responseText = """
         🎨 **Fun Mode Activated!**
         
-        Please reply to this message by attaching a picture that you want to transform.
-        Choose wisely, you can only do this 1 time every ${campaignCtx.challengeSettings.cooldownHours}h!
+        Please reply to this message with a picture attachment to start the magic 🚀
+        But choose wisely, you can only do this 1 time every ${campaignCtx.challengeSettings.cooldownHours}h!
     """.trimIndent()
 
-        val botResponse = botApi.sendMessage(
+        botApi.sendMessage(
             TelegramRequest.SendMessageRequest(
                 chat_id = chat.id,
                 text = responseText,
@@ -444,7 +444,7 @@ How to use the bot:
         val confirmationMessage = botApi.sendMessage(
             TelegramRequest.SendMessageRequest(
                 chat_id = chat.id,
-                text = "✅ Image received! Processing your fun filter...",
+                text = "Image received! Selecting your AI agent ... \uD83E\uDD16",
                 reply_parameters = ReplyParameters(
                     message_id = message.message_id,
                     chat_id = chat.id
@@ -522,7 +522,7 @@ How to use the bot:
                 botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chat.id,
-                        text = "🎉 Your fun filter has been applied! The result will be shared shortly.",
+                        text = "Job accepted \uD83D\uDCAA\uD83C\uDFFC Your image is being transformed as we speak \uD83D\uDC40 The result will be shared shortly \uD83D\uDD25",
                         reply_parameters = ReplyParameters(
                             message_id = message.message_id,
                             chat_id = chat.id
