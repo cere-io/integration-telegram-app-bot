@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import java.time.Instant
 import kotlinx.serialization.json.*
+import java.util.concurrent.ConcurrentHashMap
 
 @ApplicationScoped
 class CampaignChatCacheService(
@@ -16,6 +17,21 @@ class CampaignChatCacheService(
     private var lastUpdated: Instant = Instant.EPOCH
     private val cacheDuration = java.time.Duration.ofMinutes(1)
 
+    private val funCommandUserMap = ConcurrentHashMap<Long, Long>()
+
+    fun saveFunCommandUserId(chatId: Long, userId: Long) {
+        funCommandUserMap[chatId] = userId
+        log.info("Saved fun command userId=$userId for chatId=$chatId")
+    }
+
+    fun getFunCommandUserId(chatId: Long): Long? {
+        return funCommandUserMap[chatId]
+    }
+
+    fun clearFunCommandUserId(chatId: Long) {
+        funCommandUserMap.remove(chatId)
+        log.info("Cleared fun command state for chatId=$chatId")
+    }
 
     fun getCampaignContextByChatId(chatId: Long): CampaignContext? {
         if (cache.isEmpty() || Instant.now().isAfter(lastUpdated.plus(cacheDuration))) {

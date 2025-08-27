@@ -23,9 +23,8 @@ class RegisterWebhook(@RestClient botApi: BotApi, webhookConfig: WebhookConfig) 
         log.info("Telegram webhook set")
 
         val commands = listOf(
-            BotCommand("generate", "Apply a filter to the attached image"),
-            BotCommand("filters", "Lists all available filters"),
-            BotCommand("help", "Lists of all commands")
+            BotCommand("fun", "Apply a filter to the image you attach"),
+            BotCommand("help", "Shows this help message")
         )
         runCatching {
             botApi.setMyCommands(TelegramRequest.SetMyCommandsRequest(commands))
