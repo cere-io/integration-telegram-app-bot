@@ -334,18 +334,6 @@ class GroupMessageHandler(
         val responseText = """
 🎮 Image Challenge Commands 🎮
 
-First one is /fun:
-Please reply to this message by attaching a picture that you want to transform.
-Choose wisely, you can only do this 1 time every 24h!
-
-Flow:
-- Bot removes the previous message and says:
-  "Your request is being processed. Please wait up to 5 minutes."
-- Once received/uploaded to DDC, the bot removes the user image to prevent clutter.
-- Then bot sends the result:
-  "Here you go! This is the result 🔥"
-  and removes the earlier "processing" message.
-
 Available Commands:
 /fun - Apply a filter to the image you attach
 /help - Shows this help message
