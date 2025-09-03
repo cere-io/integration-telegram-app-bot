@@ -281,11 +281,11 @@ class GroupMessageHandler(
 
         log.info("User ${from.username ?: from.id} (ID: $userId) sent /fun command in chat $groupId")
 
-        if (!rateLimitService.canUseFun(userId, campaignCtx.challengeSettings.cooldownHours.toLong())) {
+        if (!rateLimitService.canUseFunInChannel(userId, groupId, campaignCtx.challengeSettings.cooldownHours.toLong())) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "⚠️ You can only use /fun once every ${campaignCtx.challengeSettings.cooldownHours} h.",
+                    text = "⚠️ You can only use /fun once every ${campaignCtx.challengeSettings.cooldownHours} h in this channel.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -295,7 +295,8 @@ class GroupMessageHandler(
             return
         }
 
-        rateLimitService.recordFunUsage(userId)
+        // Record usage immediately to prevent multiple /fun commands
+        rateLimitService.recordFunUsageInChannel(userId, groupId)
         campaignChatCacheService.saveFunCommandUserId(groupId, userId)
 
         val responseText = """
@@ -374,11 +375,6 @@ How to use the bot:
         val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId) ?: return
         val from = message.from ?: return
         val userId = from.id.longValue
-
-        if (campaignCtx == null) {
-            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
-            return
-        }
 
         val funUserId = campaignChatCacheService.getFunCommandUserId(groupId)
         if (funUserId == null || funUserId != userId) {
@@ -470,6 +466,8 @@ How to use the bot:
                 }
             } catch (e: Exception) {
                 log.error("Failed to upload fun image to DDC", e)
+                // Rollback the fun command usage since processing failed
+                rateLimitService.rollbackFunUsageInChannel(userId, groupId)
                 botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chat.id,
@@ -519,6 +517,8 @@ How to use the bot:
                 )
             }.onFailure {
                 log.error("❌ Failed to send fun image event", it)
+                // Rollback the fun command usage since event sending failed
+                rateLimitService.rollbackFunUsageInChannel(userId, groupId)
                 botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chat.id,
@@ -533,6 +533,8 @@ How to use the bot:
 
         } catch (e: Exception) {
             log.error("Error processing fun image", e)
+            // Rollback the fun command usage since processing failed
+            rateLimitService.rollbackFunUsageInChannel(userId, groupId)
         }
     }
 }

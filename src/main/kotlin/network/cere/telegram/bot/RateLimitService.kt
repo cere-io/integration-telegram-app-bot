@@ -11,6 +11,7 @@ class RateLimitService {
     private val log = LoggerFactory.getLogger(javaClass)
     private val channelRequestStats = ConcurrentHashMap<Long, ChannelRequestStats>()
     private val userRequestStats = ConcurrentHashMap<Long, UserRequestStats>()
+    private val userChannelRequestStats = ConcurrentHashMap<String, UserChannelRequestStats>()
 
     data class ChannelRequestStats(
         val channelId: Long,
@@ -22,6 +23,12 @@ class RateLimitService {
         val userId: Long,
         val imageGenerationRequests: MutableMap<LocalDate, Int> = mutableMapOf(),
         val boostRequests: MutableMap<LocalDate, Int> = mutableMapOf(),
+        val funCommandUsage: MutableMap<LocalDateTime, Boolean> = mutableMapOf()
+    )
+
+    data class UserChannelRequestStats(
+        val userId: Long,
+        val channelId: Long,
         val funCommandUsage: MutableMap<LocalDateTime, Boolean> = mutableMapOf()
     )
 
@@ -108,11 +115,46 @@ class RateLimitService {
         return canUse
     }
 
+    fun canUseFunInChannel(userId: Long, channelId: Long, cooldownHours: Long): Boolean {
+        val stats = getOrCreateUserChannelStats(userId, channelId)
+        val now = LocalDateTime.now()
+
+        stats.funCommandUsage.entries.removeIf { it.key.plusHours(cooldownHours).isBefore(now) }
+        val lastUsage = stats.funCommandUsage.keys.maxOrNull()
+        val canUse = lastUsage == null || lastUsage.plusHours(cooldownHours).isBefore(now)
+
+        if (!canUse) {
+            log.warn("Fun command cooldown active for user $userId in channel $channelId, last used at $lastUsage")
+        }
+        return canUse
+    }
+
     fun recordFunUsage(userId: Long) {
         val stats = getOrCreateUserStats(userId)
         val now = LocalDateTime.now()
         stats.funCommandUsage[now] = true
         log.debug("Fun command usage recorded for user $userId at $now")
+    }
+
+    fun recordFunUsageInChannel(userId: Long, channelId: Long) {
+        val stats = getOrCreateUserChannelStats(userId, channelId)
+        val now = LocalDateTime.now()
+        stats.funCommandUsage[now] = true
+        log.debug("Fun command usage recorded for user $userId in channel $channelId at $now")
+    }
+
+    fun rollbackFunUsageInChannel(userId: Long, channelId: Long) {
+        val key = "${userId}_${channelId}"
+        val stats = userChannelRequestStats[key]
+        if (stats != null) {
+            val now = LocalDateTime.now()
+            // Remove the most recent usage record
+            val mostRecentUsage = stats.funCommandUsage.keys.maxOrNull()
+            if (mostRecentUsage != null) {
+                stats.funCommandUsage.remove(mostRecentUsage)
+                log.debug("Fun command usage rolled back for user $userId in channel $channelId, removed usage at $mostRecentUsage")
+            }
+        }
     }
 
     private fun getOrCreateChannelStats(channelId: Long): ChannelRequestStats {
@@ -121,6 +163,11 @@ class RateLimitService {
 
     private fun getOrCreateUserStats(userId: Long): UserRequestStats {
         return userRequestStats.computeIfAbsent(userId) { UserRequestStats(it) }
+    }
+
+    private fun getOrCreateUserChannelStats(userId: Long, channelId: Long): UserChannelRequestStats {
+        val key = "${userId}_${channelId}"
+        return userChannelRequestStats.computeIfAbsent(key) { UserChannelRequestStats(userId, channelId) }
     }
 
     private fun cleanupOldChannelStats(stats: ChannelRequestStats, now: LocalDateTime, today: LocalDate) {
