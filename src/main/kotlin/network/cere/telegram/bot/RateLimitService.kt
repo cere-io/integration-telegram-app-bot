@@ -32,7 +32,7 @@ class RateLimitService {
         val funCommandUsage: MutableMap<LocalDateTime, Boolean> = mutableMapOf()
     )
 
-    fun canMakeChannelRequest(channelId: Long, limits: CampaignChatCacheService.ChallengeSettings): Boolean {
+    fun canMakeChannelRequest(channelId: Long, limits: CampaignChatService.ChallengeSettings): Boolean {
         val stats = getOrCreateChannelStats(channelId)
         val now = LocalDateTime.now()
         val today = LocalDate.now()
@@ -47,7 +47,7 @@ class RateLimitService {
         return canMake
     }
 
-    fun canGenerateImage(userId: Long, limits: CampaignChatCacheService.ChallengeSettings): Boolean {
+    fun canGenerateImage(userId: Long, limits: CampaignChatService.ChallengeSettings): Boolean {
         val stats = getOrCreateUserStats(userId)
         val today = LocalDate.now()
 
@@ -61,7 +61,7 @@ class RateLimitService {
         return canMake
     }
 
-    fun canBoost(userId: Long, limits: CampaignChatCacheService.ChallengeSettings): Boolean {
+    fun canBoost(userId: Long, limits: CampaignChatService.ChallengeSettings): Boolean {
         val stats = getOrCreateUserStats(userId)
         val today = LocalDate.now()
 

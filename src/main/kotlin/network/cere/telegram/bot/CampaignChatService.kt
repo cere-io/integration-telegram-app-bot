@@ -8,11 +8,12 @@ import kotlinx.serialization.json.*
 import java.util.concurrent.ConcurrentHashMap
 
 @ApplicationScoped
-class CampaignChatCacheService(
+class CampaignChatService(
     @RestClient private val robClient: RobClient,
     private val config: Config,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
+    
     private var cache: Map<Long, CampaignContext> = emptyMap()
     private var lastUpdated: Instant = Instant.EPOCH
     private val cacheDuration = java.time.Duration.ofMinutes(1)
@@ -42,22 +43,26 @@ class CampaignChatCacheService(
 
     private fun refreshCache() {
         try {
-            val organizationsResponse = robClient.getOrganizations(
-                dataServiceId = config.appId(),
-            )
+            val staticConfigs = config.groups().values
+            val orgIds = staticConfigs.map { it.orgId() }.distinct()
+            val campaignIds = staticConfigs.map { it.campaignId() }.distinct()
 
-            val organizations = organizationsResponse.data
-            if (organizations.isEmpty()) {
+
+            if (orgIds.isEmpty()) {
+                log.warn("No organizations found in static config")
                 return
             }
 
             val allCampaigns = mutableListOf<Campaign>()
-            for (organization in organizations) {
+            for (orgId in orgIds) {
                 val campaignsResponse = robClient.getCampaigns(
                     dataServiceId = config.appId(),
-                    organizationId = organization.id
+                    organizationId = orgId.toString()
                 )
-                allCampaigns.addAll(campaignsResponse.data)
+                val filteredCampaigns = campaignsResponse.data.filter { campaign ->
+                    campaign.campaignId.toString() in campaignIds
+                }
+                allCampaigns.addAll(filteredCampaigns)
             }
 
             val newMap = allCampaigns.flatMap { campaign ->
@@ -75,6 +80,7 @@ class CampaignChatCacheService(
 
             cache = newMap
             lastUpdated = Instant.now()
+            log.info("Cache refreshed successfully. Loaded ${newMap.size} chat configurations with challenge settings")
         } catch (e: Exception) {
             log.error("❌ Failed to refresh campaign-chat mapping", e)
         }
@@ -95,31 +101,11 @@ class CampaignChatCacheService(
             val maxBoost = challengeSettingsObj?.get("maxBoostPerDay")?.jsonPrimitive?.intOrNull ?: 1
             val maxChannelRequestsPerDay = challengeSettingsObj?.get("maxChannelRequestsPerDay")?.jsonPrimitive?.intOrNull ?: 1000
 
-            // Extract prompt tags
-            val promptTagsArray = challengeSettingsObj?.get("promptTags")?.jsonArray
-            val promptTags = if (promptTagsArray != null) {
-                promptTagsArray.mapNotNull { element ->
-                    if (element is JsonObject) {
-                        val tag = element["tag"]?.jsonPrimitive?.content
-                        val prompt = element["prompt"]?.jsonPrimitive?.content
-                        if (tag != null && prompt != null) {
-                            PromptTag(tag, prompt)
-                        } else null
-                    } else null
-                }
-            } else {
-                listOf(
-                    PromptTag("fire", "anime-style portrait of a man in a tuxedo with a blazing fire aura behind him, surrounded by heat waves and glowing embers, dramatic lighting, fiery background, highly detailed, cinematic look"),
-                    PromptTag("ice", "anime-style portrait of a man in a tuxedo with a glowing icy aura behind him, surrounded by cold mist and blue light, dramatic lighting, frozen background, highly detailed, cinematic look")
-                )
-            }
-
             val challengeSettings = ChallengeSettings(
                 cooldownHours = cooldown,
                 maxImageGenerationPerDay = maxImageGeneration,
                 maxBoostPerDay = maxBoost,
-                maxChannelRequestsPerDay = maxChannelRequestsPerDay,
-                promptTags = promptTags
+                maxChannelRequestsPerDay = maxChannelRequestsPerDay
             )
 
             return when (chatField) {
@@ -161,11 +147,7 @@ class CampaignChatCacheService(
         val cooldownHours: Int,
         val maxImageGenerationPerDay: Int = 1,
         val maxBoostPerDay: Int = 1,
-        val maxChannelRequestsPerDay: Int = 1000,
-        val promptTags: List<PromptTag> = listOf(
-            PromptTag("fire", "anime-style portrait of a man in a tuxedo with a blazing fire aura behind him, surrounded by heat waves and glowing embers, dramatic lighting, fiery background, highly detailed, cinematic look"),
-            PromptTag("ice", "anime-style portrait of a man in a tuxedo with a glowing icy aura behind him, surrounded by cold mist and blue light, dramatic lighting, frozen background, highly detailed, cinematic look")
-        )
+        val maxChannelRequestsPerDay: Int = 1000
     )
 
     data class ChatChallengeConfig(

@@ -27,7 +27,4 @@ data class MemeImageEventPayload(
     val imageUrl: String,
 
     val prompt: String,
-
-    @SerialName("prompt_tags")
-    val promptTags: List<PromptTag> = emptyList(),
 )

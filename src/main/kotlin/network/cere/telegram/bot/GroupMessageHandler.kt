@@ -27,7 +27,7 @@ class GroupMessageHandler(
     private val ddcService: DdcService,
     @RestClient private val botFileApi: BotFileApi,
     private val rateLimitService: RateLimitService,
-    private val campaignChatCacheService: CampaignChatCacheService
+    private val campaignChatService: CampaignChatService
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
@@ -43,14 +43,31 @@ class GroupMessageHandler(
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val ddcFileUrl = "${cdnUrl}/${bucket}/"
+    private val groupConfigs = config.groups().mapValues { (_, group) -> group }
+    
+    private fun getChallengeSettings(groupId: Long): CampaignChatService.ChallengeSettings {
+        val campaignContext = campaignChatService.getCampaignContextByChatId(groupId)
+        return if (campaignContext != null) {
+            log.debug("Using dynamic challenge settings for group $groupId: cooldown=${campaignContext.challengeSettings.cooldownHours}h, maxChannelRequests=${campaignContext.challengeSettings.maxChannelRequestsPerDay}")
+            campaignContext.challengeSettings
+        } else {
+            log.debug("Using default challenge settings for group $groupId")
+            CampaignChatService.ChallengeSettings(
+                cooldownHours = 1,
+                maxChannelRequestsPerDay = 100,
+                maxBoostPerDay = 100,
+                maxImageGenerationPerDay = 10
+            )
+        }
+    }
 
     fun handle(update: Update) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignContext = campaignChatCacheService.getCampaignContextByChatId(groupId)
-        if (campaignContext == null) {
-            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for message onboarding", chat.title, groupId)
             return
         }
         val from = message.from
@@ -59,7 +76,9 @@ class GroupMessageHandler(
             return
         }
 
-        if (!rateLimitService.canMakeChannelRequest(groupId, campaignContext.challengeSettings)) {
+        val challengeSettings = getChallengeSettings(groupId)
+        
+        if (!rateLimitService.canMakeChannelRequest(groupId, challengeSettings)) {
             log.warn("Rate limit exceeded for group $groupId")
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
@@ -100,8 +119,8 @@ class GroupMessageHandler(
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
             payload = MessageEventPayload(
-                orgId = campaignContext.orgId.toInt(),
-                campaignId = campaignContext.campaignId.toString(),
+                orgId = groupConfig.orgId(),
+                campaignId = groupConfig.campaignId(),
                 groupId = groupId,
                 messageId = message.message_id.longValue,
                 dateUnixTime = message.date,
@@ -137,21 +156,22 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
-        
-        if (campaignCtx == null) {
-            log.warn("Channel $groupId not associated with any campaign")
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for image processing", chat.title, groupId)
             return
         }
+        
+        val challengeSettings = getChallengeSettings(groupId)
         
         val from = message.from ?: return
         val userId = from.id.longValue
         
-        if (!rateLimitService.canGenerateImage(userId, campaignCtx.challengeSettings)) {
+        if (!rateLimitService.canGenerateImage(userId, challengeSettings)) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "You can only generate a new aura infused avatar every ${campaignCtx.challengeSettings.cooldownHours}h.",
+                    text = "You can only generate a new aura infused avatar every ${challengeSettings.cooldownHours}h.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -223,15 +243,14 @@ class GroupMessageHandler(
 
             val event = Event(
                 payload = MemeImageEventPayload(
-                    orgId = campaignCtx.orgId.toInt(),
-                    campaignId = campaignCtx.campaignId.toString(),
+                    orgId = groupConfig.orgId(),
+                    campaignId = groupConfig.campaignId(),
                     groupId = requireNotNull(chatId.longValue),
                     messageId = requireNotNull(update.message?.message_id).longValue,
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
                     userId = requireNotNull(update.message?.from?.id).longValue,
                     userName = userName,
-                    promptTags = campaignCtx.challengeSettings.promptTags
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
@@ -270,22 +289,24 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
-        if (campaignCtx == null) {
-            log.warn("Channel $groupId not associated with any campaign")
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun command", chat.title, groupId)
             return
         }
+        
+        val challengeSettings = getChallengeSettings(groupId)
 
         val from = message.from ?: return
         val userId = from.id.longValue
 
         log.info("User ${from.username ?: from.id} (ID: $userId) sent /fun command in chat $groupId")
 
-        if (!rateLimitService.canUseFunInChannel(userId, groupId, campaignCtx.challengeSettings.cooldownHours.toLong())) {
+        if (!rateLimitService.canUseFunInChannel(userId, groupId, challengeSettings.cooldownHours.toLong())) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "⚠️ You can only use /fun once every ${campaignCtx.challengeSettings.cooldownHours} h in this channel.",
+                    text = "⚠️ You can only use /fun once every ${challengeSettings.cooldownHours} h in this channel.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -297,13 +318,13 @@ class GroupMessageHandler(
 
         // Record usage immediately to prevent multiple /fun commands
         rateLimitService.recordFunUsageInChannel(userId, groupId)
-        campaignChatCacheService.saveFunCommandUserId(groupId, userId)
+        campaignChatService.saveFunCommandUserId(groupId, userId)
 
         val responseText = """
         🎨 **Fun Mode Activated!**
         
         Please reply to this message with a picture attachment to start the magic 🚀
-        But choose wisely, you can only do this 1 time every ${campaignCtx.challengeSettings.cooldownHours}h!
+        But choose wisely, you can only do this 1 time every ${challengeSettings.cooldownHours}h!
     """.trimIndent()
 
         botApi.sendMessage(
@@ -323,12 +344,13 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
-
-        if (campaignCtx == null) {
-            log.warn("Channel $groupId (${chat.title}) not associated with any campaign")
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for help command", chat.title, groupId)
             return
         }
+        
+        val challengeSettings = getChallengeSettings(groupId)
 
         val chatId = chat.id
 
@@ -341,7 +363,7 @@ Available Commands:
 
 How to use the bot:
 - Image Generation: type /fun and reply to the bot message by attaching a photo to generate a new image
-- Cooldowns: 1 image generation every ${campaignCtx.challengeSettings.cooldownHours} h!
+- Cooldowns: 1 image generation every ${challengeSettings.cooldownHours} h!
 """.trimIndent()
 
         botApi.sendMessage(
@@ -372,11 +394,15 @@ How to use the bot:
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId) ?: return
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun image response", chat.title, groupId)
+            return
+        }
         val from = message.from ?: return
         val userId = from.id.longValue
 
-        val funUserId = campaignChatCacheService.getFunCommandUserId(groupId)
+        val funUserId = campaignChatService.getFunCommandUserId(groupId)
         if (funUserId == null || funUserId != userId) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
@@ -438,17 +464,18 @@ How to use the bot:
 
         processFunImage(update, photo, confirmationMessage)
 
-        campaignChatCacheService.clearFunCommandUserId(groupId)
+        campaignChatService.clearFunCommandUserId(groupId)
     }
 
     private fun processFunImage(update: Update, photo: com.github.omarmiatello.telegram.PhotoSize, confirmationMessageId: String) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val campaignCtx = campaignChatCacheService.getCampaignContextByChatId(groupId)
-
-        if (campaignCtx == null) return
-
+        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun image processing", chat.title, groupId)
+            return
+        }
         val from = message.from ?: return
         val userId = from.id.longValue
 
@@ -485,15 +512,14 @@ How to use the bot:
 
             val event = Event(
                 payload = MemeImageEventPayload(
-                    orgId = campaignCtx.orgId.toInt(),
-                    campaignId = campaignCtx.campaignId.toString(),
+                    orgId = groupConfig.orgId(),
+                    campaignId = groupConfig.campaignId(),
                     groupId = groupId,
                     messageId = message.message_id.longValue,
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = "fun_filter",
                     userId = userId,
                     userName = userName,
-                    promptTags = campaignCtx.challengeSettings.promptTags
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
