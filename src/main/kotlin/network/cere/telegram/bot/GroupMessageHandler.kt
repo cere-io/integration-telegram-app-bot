@@ -43,7 +43,7 @@ class GroupMessageHandler(
     private val log = LoggerFactory.getLogger(javaClass)
 
     private val ddcFileUrl = "${cdnUrl}/${bucket}/"
-    private val groupConfigs = config.groups().mapValues { (_, group) -> group }
+    private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
     
     private fun getChallengeSettings(groupId: Long): CampaignChatService.ChallengeSettings {
         val campaignContext = campaignChatService.getCampaignContextByChatId(groupId)
@@ -65,7 +65,7 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for message onboarding", chat.title, groupId)
             return
@@ -156,7 +156,7 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for image processing", chat.title, groupId)
             return
@@ -289,7 +289,7 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for fun command", chat.title, groupId)
             return
@@ -344,7 +344,7 @@ class GroupMessageHandler(
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for help command", chat.title, groupId)
             return
@@ -394,7 +394,7 @@ How to use the bot:
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for fun image response", chat.title, groupId)
             return
@@ -471,7 +471,7 @@ How to use the bot:
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs.values.find { it.groupId() == groupId }
+        val groupConfig = groupConfigs[groupId]
         if (groupConfig == null) {
             log.warn("Group {} with id {} not configured for fun image processing", chat.title, groupId)
             return
