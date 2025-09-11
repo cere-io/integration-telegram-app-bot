@@ -402,12 +402,11 @@ How to use the bot:
         val from = message.from ?: return
         val userId = from.id.longValue
 
-        val funUserId = campaignChatService.getFunCommandUserId(groupId)
-        if (funUserId == null || funUserId != userId) {
+        if (!campaignChatService.isUserAllowedToUploadImage(groupId, userId)) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
                     chat_id = chat.id,
-                    text = "⚠️ Only the user who sent /fun can upload the image.",
+                    text = "⚠️ Only users who sent /fun can upload images. Please send /fun first.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
                         chat_id = chat.id
@@ -464,7 +463,7 @@ How to use the bot:
 
         processFunImage(update, photo, confirmationMessage)
 
-        campaignChatService.clearFunCommandUserId(groupId)
+        campaignChatService.clearFunCommandUserId(groupId, userId)
     }
 
     private fun processFunImage(update: Update, photo: com.github.omarmiatello.telegram.PhotoSize, confirmationMessageId: String) {
@@ -542,13 +541,13 @@ How to use the bot:
                     )
                 )
                 // Clear the fun command user after successful processing
-                campaignChatService.clearFunCommandUserId(groupId)
+                campaignChatService.clearFunCommandUserId(groupId, userId)
             }.onFailure {
                 log.error("❌ Failed to send fun image event", it)
                 // Rollback the fun command usage since event sending failed
                 rateLimitService.rollbackFunUsageInChannel(userId, groupId)
                 // Clear the fun command user since event sending failed
-                campaignChatService.clearFunCommandUserId(groupId)
+                campaignChatService.clearFunCommandUserId(groupId, userId)
                 botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chat.id,
@@ -566,7 +565,7 @@ How to use the bot:
             // Rollback the fun command usage since processing failed
             rateLimitService.rollbackFunUsageInChannel(userId, groupId)
             // Clear the fun command user since processing failed
-            campaignChatService.clearFunCommandUserId(groupId)
+            campaignChatService.clearFunCommandUserId(groupId, userId)
         }
     }
 }

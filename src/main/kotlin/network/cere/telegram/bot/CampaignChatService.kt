@@ -18,20 +18,20 @@ class CampaignChatService(
     private var lastUpdated: Instant = Instant.EPOCH
     private val cacheDuration = java.time.Duration.ofMinutes(1)
 
-    private val funCommandUserMap = ConcurrentHashMap<Long, Long>()
+    private val funCommandUserMap = ConcurrentHashMap<Long, MutableSet<Long>>()
 
     fun saveFunCommandUserId(chatId: Long, userId: Long) {
-        funCommandUserMap[chatId] = userId
+        funCommandUserMap.computeIfAbsent(chatId) { ConcurrentHashMap.newKeySet() }.add(userId)
         log.info("Saved fun command userId=$userId for chatId=$chatId")
     }
 
-    fun getFunCommandUserId(chatId: Long): Long? {
-        return funCommandUserMap[chatId]
+    fun isUserAllowedToUploadImage(chatId: Long, userId: Long): Boolean {
+        return funCommandUserMap[chatId]?.contains(userId) == true
     }
 
-    fun clearFunCommandUserId(chatId: Long) {
-        funCommandUserMap.remove(chatId)
-        log.info("Cleared fun command userId for chatId=$chatId")
+    fun clearFunCommandUserId(chatId: Long, userId: Long) {
+        funCommandUserMap[chatId]?.remove(userId)
+        log.info("Cleared fun command userId=$userId for chatId=$chatId")
     }
 
     fun getCampaignContextByChatId(chatId: Long): CampaignContext? {
