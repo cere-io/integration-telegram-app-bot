@@ -541,10 +541,14 @@ How to use the bot:
                         )
                     )
                 )
+                // Clear the fun command user after successful processing
+                campaignChatService.clearFunCommandUserId(groupId)
             }.onFailure {
                 log.error("❌ Failed to send fun image event", it)
                 // Rollback the fun command usage since event sending failed
                 rateLimitService.rollbackFunUsageInChannel(userId, groupId)
+                // Clear the fun command user since event sending failed
+                campaignChatService.clearFunCommandUserId(groupId)
                 botApi.sendMessage(
                     TelegramRequest.SendMessageRequest(
                         chat_id = chat.id,
@@ -561,6 +565,8 @@ How to use the bot:
             log.error("Error processing fun image", e)
             // Rollback the fun command usage since processing failed
             rateLimitService.rollbackFunUsageInChannel(userId, groupId)
+            // Clear the fun command user since processing failed
+            campaignChatService.clearFunCommandUserId(groupId)
         }
     }
 }

@@ -31,7 +31,7 @@ class CampaignChatService(
 
     fun clearFunCommandUserId(chatId: Long) {
         funCommandUserMap.remove(chatId)
-        log.info("Cleared fun command state for chatId=$chatId")
+        log.info("Cleared fun command userId for chatId=$chatId")
     }
 
     fun getCampaignContextByChatId(chatId: Long): CampaignContext? {
