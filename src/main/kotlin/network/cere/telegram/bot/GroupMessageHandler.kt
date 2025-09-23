@@ -76,6 +76,42 @@ class GroupMessageHandler(
             return
         }
 
+        // Send TELEGRAM_MESSAGE event for every message in configured groups
+        val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
+        val event = Event(
+            payload = MessageEventPayload(
+                orgId = groupConfig.orgId(),
+                campaignId = groupConfig.campaignId(),
+                groupId = groupId,
+                messageId = message.message_id.longValue,
+                dateUnixTime = message.date,
+                fromUserId = from.id.longValue,
+                fromUserName = from.username ?: "unknown",
+                text = message.text
+                    ?: message.caption
+                    ?: when {
+                        message.photo != null -> "[Photo]"
+                        message.video != null -> "[Video]"
+                        message.document != null -> "[Document]"
+                        message.sticker != null -> "[Sticker]"
+                        else -> "[Unsupported message type]"
+                    },
+            ).let(json::encodeToJsonElement),
+            appId = config.appId(),
+            accountId = wallet.accountId,
+            userPubKey = wallet.userPubKey,
+            dataServicePubKey = signer.publicKey,
+            signing  = byteArrayOf(0x00, 0x01, 0x00).hex(false),
+            type = EVENT_TYPE_MESSAGE,
+        ).sign(signer)
+
+        runCatching {
+            computeEngineClient.sendEvent(event)
+            log.info("✅ TELEGRAM_MESSAGE event sent successfully for message ${message.message_id}")
+        }.onFailure {
+            log.error("❌ Failed to send TELEGRAM_MESSAGE event", it)
+        }
+
         val challengeSettings = getChallengeSettings(groupId)
         
         if (!rateLimitService.canMakeChannelRequest(groupId, challengeSettings)) {
@@ -115,40 +151,6 @@ class GroupMessageHandler(
 
         if (message.text?.startsWith(HELP_COMMAND) == true) {
             handleHelpCommand(update)
-        }
-        val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
-        val event = Event(
-            payload = MessageEventPayload(
-                orgId = groupConfig.orgId(),
-                campaignId = groupConfig.campaignId(),
-                groupId = groupId,
-                messageId = message.message_id.longValue,
-                dateUnixTime = message.date,
-                fromUserId = from.id.longValue,
-                fromUserName = from.username ?: "unknown",
-                text = message.text
-                    ?: message.caption
-                    ?: when {
-                        message.photo != null -> "[Photo]"
-                        message.video != null -> "[Video]"
-                        message.document != null -> "[Document]"
-                        message.sticker != null -> "[Sticker]"
-                        else -> "[Unsupported message type]"
-                    },
-            ).let(json::encodeToJsonElement),
-            appId = config.appId(),
-            accountId = wallet.accountId,
-            userPubKey = wallet.userPubKey,
-            dataServicePubKey = signer.publicKey,
-            signing  = byteArrayOf(0x00, 0x01, 0x00).hex(false),
-            type = EVENT_TYPE_MESSAGE,
-        ).sign(signer)
-
-        runCatching {
-            computeEngineClient.sendEvent(event)
-            log.info("✅ Event sent successfully")
-        }.onFailure {
-            log.error("❌ Failed to send event", it)
         }
     }
 
