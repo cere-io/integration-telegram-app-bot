@@ -54,7 +54,7 @@ class GroupMessageHandler(
             log.debug("Using default challenge settings for group $groupId")
             CampaignChatService.ChallengeSettings(
                 cooldownHours = 1,
-                maxChannelRequestsPerDay = 100,
+                maxChannelRequestsPerDay = Int.MAX_VALUE,
                 maxBoostPerDay = 100,
                 maxImageGenerationPerDay = 10
             )

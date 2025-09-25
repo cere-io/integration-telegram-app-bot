@@ -99,7 +99,7 @@ class CampaignChatService(
             val cooldown = challengeSettingsObj?.get("cooldownHours")?.jsonPrimitive?.intOrNull ?: 24
             val maxImageGeneration = challengeSettingsObj?.get("maxImageGenerationPerDay")?.jsonPrimitive?.intOrNull ?: 1
             val maxBoost = challengeSettingsObj?.get("maxBoostPerDay")?.jsonPrimitive?.intOrNull ?: 1
-            val maxChannelRequestsPerDay = challengeSettingsObj?.get("maxChannelRequestsPerDay")?.jsonPrimitive?.intOrNull ?: 1000
+            val maxChannelRequestsPerDay = challengeSettingsObj?.get("maxChannelRequestsPerDay")?.jsonPrimitive?.intOrNull ?: Int.MAX_VALUE
 
             val challengeSettings = ChallengeSettings(
                 cooldownHours = cooldown,
@@ -147,7 +147,7 @@ class CampaignChatService(
         val cooldownHours: Int,
         val maxImageGenerationPerDay: Int = 1,
         val maxBoostPerDay: Int = 1,
-        val maxChannelRequestsPerDay: Int = 1000
+        val maxChannelRequestsPerDay: Int = Int.MAX_VALUE
     )
 
     data class ChatChallengeConfig(
