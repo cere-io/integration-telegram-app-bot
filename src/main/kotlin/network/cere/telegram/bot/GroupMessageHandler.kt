@@ -4,13 +4,13 @@ import com.github.omarmiatello.telegram.ReplyParameters
 import com.github.omarmiatello.telegram.TelegramRequest
 import com.github.omarmiatello.telegram.TelegramRequest.GetFileRequest
 import com.github.omarmiatello.telegram.Update
+import com.github.omarmiatello.telegram.ParseMode
 import jakarta.enterprise.context.ApplicationScoped
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.eclipse.microprofile.rest.client.inject.RestClient
 import org.slf4j.LoggerFactory
-import java.time.Instant
 
 @ApplicationScoped
 class GroupMessageHandler(
@@ -26,26 +26,40 @@ class GroupMessageHandler(
     @ConfigProperty(name = "ddc.bucket") bucket: String,
     private val ddcService: DdcService,
     @RestClient private val botFileApi: BotFileApi,
+    private val rateLimitService: RateLimitService,
+    private val campaignChatService: CampaignChatService
 ) {
     private companion object {
         private const val EVENT_TYPE_MESSAGE = "TELEGRAM_MESSAGE"
         private const val EVENT_TYPE_MEME_IMAGE = "TELEGRAM_MEME_IMAGE"
-        private const val EVENT_TYPE_BOOST = "BOOST_EVENT"
         private const val MEME_HASH_TAG = "#meme"
-        private const val GENERATE_COMMAND = "/generate"
-        private const val AVATAR_COMMAND = "/avatar"
-        private const val BOOST_COMMAND = "/boost"
+        private const val FUN_COMMAND = "/fun"
+        private const val HELP_COMMAND = "/help"
         private const val MAX_IMAGE_SIZE = 1 * 1024 * 1024
-        private const val MIN_CAPTION_LENGTH = 3
-        private const val BOOST_COOLDOWN_HOURS = 24L
-        private const val BOOST_COOLDOWN_MINUTES = 1L
+        private const val MIN_CAPTION_LENGTH = 0
         private const val MAX_LEVEL = 5
     }
 
     private val log = LoggerFactory.getLogger(javaClass)
 
-    private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
     private val ddcFileUrl = "${cdnUrl}/${bucket}/"
+    private val groupConfigs = config.groups().entries.associate { it.value.groupId() to it.value }
+    
+    private fun getChallengeSettings(groupId: Long): CampaignChatService.ChallengeSettings {
+        val campaignContext = campaignChatService.getCampaignContextByChatId(groupId)
+        return if (campaignContext != null) {
+            log.debug("Using dynamic challenge settings for group $groupId: cooldown=${campaignContext.challengeSettings.cooldownHours}h, maxChannelRequests=${campaignContext.challengeSettings.maxChannelRequestsPerDay}")
+            campaignContext.challengeSettings
+        } else {
+            log.debug("Using default challenge settings for group $groupId")
+            CampaignChatService.ChallengeSettings(
+                cooldownHours = 1,
+                maxChannelRequestsPerDay = Int.MAX_VALUE,
+                maxBoostPerDay = 100,
+                maxImageGenerationPerDay = 10
+            )
+        }
+    }
 
     fun handle(update: Update) {
         val message = update.message ?: return
@@ -61,17 +75,8 @@ class GroupMessageHandler(
             log.warn("Unable to identify message author")
             return
         }
-        if (shouldProcessImageGeneration(message)) {
-            handleImageForMeme(update)
-        }
-        
-        if (message.text?.startsWith(AVATAR_COMMAND) == true) {
-            handleAvatarCommand(update)
-        }
 
-        if (message.text?.startsWith(BOOST_COMMAND) == true) {
-            handleBoostCommand(update)
-        }
+        // Send TELEGRAM_MESSAGE event for every message in configured groups
         val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
         val event = Event(
             payload = MessageEventPayload(
@@ -102,13 +107,82 @@ class GroupMessageHandler(
 
         runCatching {
             computeEngineClient.sendEvent(event)
-            log.info("✅ Event sent successfully")
+            log.info("✅ TELEGRAM_MESSAGE event sent successfully for message ${message.message_id}")
         }.onFailure {
-            log.error("❌ Failed to send event", it)
+            log.error("❌ Failed to send TELEGRAM_MESSAGE event", it)
+        }
+
+        val challengeSettings = getChallengeSettings(groupId)
+        
+        if (!rateLimitService.canMakeChannelRequest(groupId, challengeSettings)) {
+            log.warn("Rate limit exceeded for group $groupId")
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "⚠️ Too many requests from this channel. Please try again later.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+        
+        rateLimitService.recordChannelRequest(groupId)
+
+        // Handle /fun command first
+        if (message.text?.startsWith(FUN_COMMAND) == true) {
+            log.info("Handling /fun command from user ${from.username ?: from.id}")
+            handleFunCommand(update)
+            return
+        }
+
+        // Handle image response to /fun command
+        if (message.photo != null && isReplyToFunCommand(message)) {
+            log.info("Handling fun image response from user ${from.username ?: from.id}")
+            handleFunImageResponse(update)
+            return
+        }
+        
+        if (shouldProcessImageGeneration(message)) {
+            handleImageForMeme(update)
+        }
+
+        if (message.text?.startsWith(HELP_COMMAND) == true) {
+            handleHelpCommand(update)
         }
     }
 
     private fun handleImageForMeme(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId]
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for image processing", chat.title, groupId)
+            return
+        }
+        
+        val challengeSettings = getChallengeSettings(groupId)
+        
+        val from = message.from ?: return
+        val userId = from.id.longValue
+        
+        if (!rateLimitService.canGenerateImage(userId, challengeSettings)) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "You can only generate a new aura infused avatar every ${challengeSettings.cooldownHours}h.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+        
         val photo = requireNotNull(update.message?.photo)
             .filter { it.file_size != null }
             .sortedByDescending { it.file_size }
@@ -117,8 +191,8 @@ class GroupMessageHandler(
         log.info("Image received {} {}", photo, caption)
 
         val replyMessageAndProcess = when {
-            photo == null -> "Image is too large, the limit is $MAX_IMAGE_SIZE bytes" to false
-            caption.length < MIN_CAPTION_LENGTH -> "Caption is too short" to false
+            photo == null -> "You forget to attach an image. The command /generate can only work if you attach your avatar/pfp image following by #<aura type> . For a list of Aura filters, type /aura ." to false
+            caption.length < MIN_CAPTION_LENGTH -> "You select your aura type by adding a #<aura type e.g. #fire . For a list of Aura filters, type /aura ." to false
             else -> "Your avatar is being processed... \uD83D\uDE0A\nPlease wait a few seconds..." to true
         }
 
@@ -133,9 +207,10 @@ class GroupMessageHandler(
         ).also(botApi::sendMessage)
 
         if (replyMessageAndProcess.second) {
+            rateLimitService.recordImageGeneration(userId)
+            
             val wallet =
                 cereWalletClient.walletByTelegramUserId(requireNotNull(update.message?.from?.id?.longValue)).data
-            val groupConfig = groupConfigs.getValue(chatId.longValue)
 
             // Download image from Telegram and upload to DDC
             val imageCid = try {
@@ -177,7 +252,7 @@ class GroupMessageHandler(
                     imageUrl = "$ddcFileUrl${imageCid}",
                     prompt = caption,
                     userId = requireNotNull(update.message?.from?.id).longValue,
-                    userName = userName
+                    userName = userName,
                 ).let(json::encodeToJsonElement),
                 appId = config.appId(),
                 accountId = wallet.accountId,
@@ -198,7 +273,7 @@ class GroupMessageHandler(
     private fun shouldProcessImageGeneration(message: com.github.omarmiatello.telegram.Message): Boolean {
         return when {
             message.photo != null && message.caption?.contains(MEME_HASH_TAG) == true -> true
-            message.photo != null && message.caption?.startsWith(GENERATE_COMMAND) == true -> true
+            message.photo != null && message.caption?.startsWith(FUN_COMMAND) == true -> true
             else -> false
         }
     }
@@ -207,252 +282,292 @@ class GroupMessageHandler(
         val caption = message.caption ?: return ""
         return when {
             caption.contains(MEME_HASH_TAG) -> caption.removePrefix(MEME_HASH_TAG).trim()
-            caption.startsWith(GENERATE_COMMAND) -> caption.removePrefix(GENERATE_COMMAND).trim()
+            caption.startsWith(FUN_COMMAND) -> caption.removePrefix(FUN_COMMAND).trim()
             else -> caption.trim()
         }
     }
-    
-    private fun handleAvatarCommand(update: Update) {
+
+    private fun handleFunCommand(update: Update) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs[groupId] ?: return
+        val groupConfig = groupConfigs[groupId]
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun command", chat.title, groupId)
+            return
+        }
+        
+        val challengeSettings = getChallengeSettings(groupId)
+
         val from = message.from ?: return
+        val userId = from.id.longValue
+
+        log.info("User ${from.username ?: from.id} (ID: $userId) sent /fun command in chat $groupId")
+
+        if (!rateLimitService.canUseFunInChannel(userId, groupId, challengeSettings.cooldownHours.toLong())) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "⚠️ You can only use /fun once every ${challengeSettings.cooldownHours} h in this channel.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+
+        // Record usage immediately to prevent multiple /fun commands
+        rateLimitService.recordFunUsageInChannel(userId, groupId)
+        campaignChatService.saveFunCommandUserId(groupId, userId)
+
+        val responseText = """
+        🎨 **Fun Mode Activated!**
         
-        val chatId = chat.id
-        
+        Please reply to this message with a picture attachment to start the magic 🚀
+        But choose wisely, you can only do this 1 time every ${challengeSettings.cooldownHours}h!
+    """.trimIndent()
+
         botApi.sendMessage(
             TelegramRequest.SendMessageRequest(
-                chat_id = chatId,
-                text = "Loading your avatar... ⏳",
+                chat_id = chat.id,
+                text = responseText,
+                parse_mode = ParseMode.Markdown,
                 reply_parameters = ReplyParameters(
                     message_id = message.message_id,
-                    chat_id = chatId
+                    chat_id = chat.id
                 )
             )
         )
-        
-        try {
-            val avatarParams = AvatarParams(
-                userId = from.id.longValue.toString(),
-                orgId = groupConfig.orgId().toString(),
-                campaignId = groupConfig.campaignId().toString()
-            )
-
-            val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
-            
-            val avatarResponse = ruleServiceClient.getAvatar(config.appId(), avatarWrapper)
-            
-            if (avatarResponse.result.code == "SUCCESS" && avatarResponse.result.data?.success == true) {
-                val avatarInfo = avatarResponse.result.data.data
-
-                avatarInfo?.url?.let {
-                    botApi.sendPhoto(
-                        TelegramRequest.SendPhotoRequest(
-                            chat_id = chatId,
-                            photo = it,
-                            caption = avatarInfo.caption,
-                            reply_parameters = ReplyParameters(
-                                message_id = message.message_id,
-                                chat_id = chatId
-                            )
-                        )
-                    )
-                }
-                
-                log.info("✅ Avatar sent successfully for user ${from.id}")
-            } else {
-                botApi.sendMessage(
-                    TelegramRequest.SendMessageRequest(
-                        chat_id = chatId,
-                        text = "❌ Failed to get avatar. Please try again later.",
-                        reply_parameters = ReplyParameters(
-                            message_id = message.message_id,
-                            chat_id = chatId
-                        )
-                    )
-                )
-                log.error("❌ Failed to get avatar for user ${from.id}: ${avatarResponse.result.code}")
-            }
-        } catch (e: Exception) {
-            log.error("❌ Error while getting avatar for user ${from.id}", e)
-            
-            botApi.sendMessage(
-                TelegramRequest.SendMessageRequest(
-                    chat_id = chatId,
-                    text = "❌ There was an error getting your avatar. Please try again later.",
-                    reply_parameters = ReplyParameters(
-                        message_id = message.message_id,
-                        chat_id = chatId
-                    )
-                )
-            )
-        }
     }
 
-    private fun handleBoostCommand(update: Update) {
+    private fun handleHelpCommand(update: Update) {
         val message = update.message ?: return
         val chat = message.chat
         val groupId = chat.id.longValue
-        val groupConfig = groupConfigs[groupId] ?: return
-        val from = message.from ?: return
+        val groupConfig = groupConfigs[groupId]
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for help command", chat.title, groupId)
+            return
+        }
+        
+        val challengeSettings = getChallengeSettings(groupId)
 
         val chatId = chat.id
+
+        val responseText = """
+🎮 Image Challenge Commands 🎮
+
+Available Commands:
+/fun - Apply a filter to the image you attach
+/help - Shows this help message
+
+How to use the bot:
+- Image Generation: type /fun and reply to the bot message by attaching a photo to generate a new image
+- Cooldowns: 1 image generation every ${challengeSettings.cooldownHours} h!
+""".trimIndent()
 
         botApi.sendMessage(
             TelegramRequest.SendMessageRequest(
                 chat_id = chatId,
-                text = "Processing your boost request... ⏳",
+                text = responseText,
+                parse_mode = ParseMode.Markdown,
                 reply_parameters = ReplyParameters(
                     message_id = message.message_id,
                     chat_id = chatId
                 )
             )
         )
+    }
 
-        try {
-            val avatarParams = AvatarParams(
-                userId = from.id.longValue.toString(),
-                orgId = groupConfig.orgId().toString(),
-                campaignId = groupConfig.campaignId().toString()
-            )
+    private fun isReplyToFunCommand(message: com.github.omarmiatello.telegram.Message): Boolean {
+        val replyToMessage = message.reply_to_message ?: return false
+        val isReplyToBotMessage = replyToMessage.from?.is_bot == true &&
+                replyToMessage.text?.contains("Fun Mode Activated") == true
+        val isReplyToFunText = replyToMessage.text == FUN_COMMAND
 
-            val avatarWrapper = AvatarRequestWrapper(params = avatarParams)
-            val avatarResponse = ruleServiceClient.getAvatar(config.appId(), avatarWrapper)
-            
-            if (avatarResponse.result.code == "SUCCESS" && avatarResponse.result.data?.success == true) {
-                val avatarInfo = avatarResponse.result.data.data
-                val lastBoostAt = avatarInfo?.last_boost_at
-                val level = avatarInfo?.level ?: 0
-                val now = Instant.now()
+        val result = isReplyToBotMessage || isReplyToFunText
 
-                val canBoost = when {
-                    level >= MAX_LEVEL -> {
-                        botApi.sendMessage(
-                            TelegramRequest.SendMessageRequest(
-                                chat_id = chatId,
-                                text = "❌ You've reached the maximum level ($MAX_LEVEL). Cannot boost further.",
-                                reply_parameters = ReplyParameters(
-                                    message_id = message.message_id,
-                                    chat_id = chatId
-                                )
-                            )
-                        )
-                        false
-                    }
-                    lastBoostAt == null -> {
-                        true
-                    }
-                    else -> {
-//                        val hoursSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toHours()
-                        val minutesSinceLastBoost = java.time.Duration.between(lastBoostAt, now).toMinutes()
-                        if (minutesSinceLastBoost < BOOST_COOLDOWN_MINUTES) {
-                            val remainingHours = BOOST_COOLDOWN_MINUTES - minutesSinceLastBoost
-                            botApi.sendMessage(
-                                TelegramRequest.SendMessageRequest(
-                                    chat_id = chatId,
-                                    text = "⏰ Too early to boost! You need to wait $remainingHours more hours.",
-                                    reply_parameters = ReplyParameters(
-                                        message_id = message.message_id,
-                                        chat_id = chatId
-                                    )
-                                )
-                            )
-                            false
-                        } else if (minutesSinceLastBoost >= BOOST_COOLDOWN_HOURS * 2) {
-                            botApi.sendMessage(
-                                TelegramRequest.SendMessageRequest(
-                                    chat_id = chatId,
-                                    text = "😔 You missed your daily boost! Your level has been reset to 0.",
-                                    reply_parameters = ReplyParameters(
-                                        message_id = message.message_id,
-                                        chat_id = chatId
-                                    )
-                                )
-                            )
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                }
+        return result
+    }
 
-                if (canBoost) {
-                    val wallet = cereWalletClient.walletByTelegramUserId(from.id.longValue).data
-                    val userName = from.username ?: "${from.first_name ?: ""} ${from.last_name ?: ""}".trim()
+    private fun handleFunImageResponse(update: Update) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId]
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun image response", chat.title, groupId)
+            return
+        }
+        val from = message.from ?: return
+        val userId = from.id.longValue
 
-                    val event = Event(
-                        payload = BoostEventPayload(
-                            orgId = groupConfig.orgId(),
-                            campaignId = groupConfig.campaignId(),
-                            groupId = groupId,
-                            messageId = message.message_id.longValue,
-                            userId = from.id.longValue,
-                            userName = userName
-                        ).let(json::encodeToJsonElement),
-                        appId = config.appId(),
-                        accountId = wallet.accountId,
-                        userPubKey = wallet.userPubKey,
-                        dataServicePubKey = signer.publicKey,
-                        signing = byteArrayOf(0x00, 0x01, 0x00).hex(false),
-                        type = EVENT_TYPE_BOOST,
-                    ).sign(signer)
-
-                    runCatching {
-                        computeEngineClient.sendEvent(event)
-                        log.info("✅ Boost event sent successfully for user ${from.id}")
-
-                        botApi.sendMessage(
-                            TelegramRequest.SendMessageRequest(
-                                chat_id = chatId,
-                                text = "🚀 Boost event sent! Your level will be updated shortly.",
-                                reply_parameters = ReplyParameters(
-                                    message_id = message.message_id,
-                                    chat_id = chatId
-                                )
-                            )
-                        )
-                    }.onFailure {
-                        log.error("❌ Failed to send boost event for user ${from.id}", it)
-
-                        botApi.sendMessage(
-                            TelegramRequest.SendMessageRequest(
-                                chat_id = chatId,
-                                text = "❌ Failed to process boost. Please try again later.",
-                                reply_parameters = ReplyParameters(
-                                    message_id = message.message_id,
-                                    chat_id = chatId
-                                )
-                            )
-                        )
-                    }
-                }
-            } else {
-                botApi.sendMessage(
-                    TelegramRequest.SendMessageRequest(
-                        chat_id = chatId,
-                        text = "❌ Failed to get avatar data. Please try again later.",
-                        reply_parameters = ReplyParameters(
-                            message_id = message.message_id,
-                            chat_id = chatId
-                        )
-                    )
-                )
-                log.error("❌ Failed to get avatar for user ${from.id}: ${avatarResponse.result.code}")
-            }
-        } catch (e: Exception) {
-            log.error("❌ Error while processing boost for user ${from.id}", e)
-            
+        if (!campaignChatService.isUserAllowedToUploadImage(groupId, userId)) {
             botApi.sendMessage(
                 TelegramRequest.SendMessageRequest(
-                    chat_id = chatId,
-                    text = "❌ There was an error processing your boost. Please try again later.",
+                    chat_id = chat.id,
+                    text = "⚠️ Only users who sent /fun can upload images. Please send /fun first.",
                     reply_parameters = ReplyParameters(
                         message_id = message.message_id,
-                        chat_id = chatId
+                        chat_id = chat.id
                     )
                 )
             )
+            return
+        }
+
+        val photos = message.photo
+        if (photos.isNullOrEmpty()) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "❌ No image found. Please attach a photo to your message.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+
+        val photo = photos
+            .filter { it.file_size != null }
+            .sortedByDescending { it.file_size }
+            .firstOrNull { it.file_size!! <= MAX_IMAGE_SIZE }
+
+        if (photo == null) {
+            botApi.sendMessage(
+                TelegramRequest.SendMessageRequest(
+                    chat_id = chat.id,
+                    text = "❌ Image file is too large. Please use an image smaller than 1MB.",
+                    reply_parameters = ReplyParameters(
+                        message_id = message.message_id,
+                        chat_id = chat.id
+                    )
+                )
+            )
+            return
+        }
+
+        val confirmationMessage = botApi.sendMessage(
+            TelegramRequest.SendMessageRequest(
+                chat_id = chat.id,
+                text = "Image received! Selecting your AI agent ... \uD83E\uDD16",
+                reply_parameters = ReplyParameters(
+                    message_id = message.message_id,
+                    chat_id = chat.id
+                )
+            )
+        )
+
+        processFunImage(update, photo, confirmationMessage)
+
+        campaignChatService.clearFunCommandUserId(groupId, userId)
+    }
+
+    private fun processFunImage(update: Update, photo: com.github.omarmiatello.telegram.PhotoSize, confirmationMessageId: String) {
+        val message = update.message ?: return
+        val chat = message.chat
+        val groupId = chat.id.longValue
+        val groupConfig = groupConfigs[groupId]
+        if (groupConfig == null) {
+            log.warn("Group {} with id {} not configured for fun image processing", chat.title, groupId)
+            return
+        }
+        val from = message.from ?: return
+        val userId = from.id.longValue
+
+        try {
+            val wallet = cereWalletClient.walletByTelegramUserId(userId).data
+
+            val imageCid = try {
+                val fileId = requireNotNull(photo.file_id)
+                val filePath = requireNotNull(botApi.getFile(GetFileRequest(fileId)).result?.file_path) {
+                    "File path not found"
+                }
+                val imageBytes = botFileApi.download(filePath).toFile().readBytes()
+                ddcService.storeFile(imageBytes).also {
+                    log.info("Fun image uploaded to DDC with CID: {}", it)
+                }
+            } catch (e: Exception) {
+                log.error("Failed to upload fun image to DDC", e)
+                // Rollback the fun command usage since processing failed
+                rateLimitService.rollbackFunUsageInChannel(userId, groupId)
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chat.id,
+                        text = "Sorry, failed to process your image. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chat.id
+                        )
+                    )
+                )
+                return
+            }
+
+            val userName = from.username ?: "${from.first_name ?: ""} ${from.last_name ?: ""}".trim()
+
+            val event = Event(
+                payload = MemeImageEventPayload(
+                    orgId = groupConfig.orgId(),
+                    campaignId = groupConfig.campaignId(),
+                    groupId = groupId,
+                    messageId = message.message_id.longValue,
+                    imageUrl = "$ddcFileUrl${imageCid}",
+                    prompt = "fun_filter",
+                    userId = userId,
+                    userName = userName,
+                ).let(json::encodeToJsonElement),
+                appId = config.appId(),
+                accountId = wallet.accountId,
+                userPubKey = wallet.userPubKey,
+                dataServicePubKey = signer.publicKey,
+                signing = byteArrayOf(0x00, 0x01, 0x00).hex(false),
+                type = EVENT_TYPE_MEME_IMAGE,
+            ).sign(signer)
+
+            runCatching {
+                computeEngineClient.sendEvent(event)
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chat.id,
+                        text = "Job accepted \uD83D\uDCAA\uD83C\uDFFC Your image is being transformed as we speak \uD83D\uDC40 The result will be shared shortly \uD83D\uDD25",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chat.id
+                        )
+                    )
+                )
+                // Clear the fun command user after successful processing
+                campaignChatService.clearFunCommandUserId(groupId, userId)
+            }.onFailure {
+                log.error("❌ Failed to send fun image event", it)
+                // Rollback the fun command usage since event sending failed
+                rateLimitService.rollbackFunUsageInChannel(userId, groupId)
+                // Clear the fun command user since event sending failed
+                campaignChatService.clearFunCommandUserId(groupId, userId)
+                botApi.sendMessage(
+                    TelegramRequest.SendMessageRequest(
+                        chat_id = chat.id,
+                        text = "❌ Failed to process your fun filter. Please try again later.",
+                        reply_parameters = ReplyParameters(
+                            message_id = message.message_id,
+                            chat_id = chat.id
+                        )
+                    )
+                )
+            }
+
+        } catch (e: Exception) {
+            log.error("Error processing fun image", e)
+            // Rollback the fun command usage since processing failed
+            rateLimitService.rollbackFunUsageInChannel(userId, groupId)
+            // Clear the fun command user since processing failed
+            campaignChatService.clearFunCommandUserId(groupId, userId)
         }
     }
 }

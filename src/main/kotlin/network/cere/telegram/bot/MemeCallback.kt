@@ -69,8 +69,8 @@ class MemeCallback(
                             groupId = chatId.longValue,
                             messageId,
                             imageUrl = "$ddcFileUrl${cid}",
-                            cid,
-                            null,
+                            imageCid = cid,
+                            imageBase64 = null,
                             prompt,
                             boost = boost ?: false,
                         ).let(json::encodeToJsonElement),
@@ -101,7 +101,7 @@ class MemeCallback(
             TelegramRequest.SendPhotoRequest(
                 chat_id = ChatId(groupId.toString()),
                 photo = url,
-                caption = "✅ Here is your processed avatar!",
+                caption = "Here you go! This is the result \uD83D\uDD25",
                 reply_parameters = ReplyParameters(
                     chat_id = ChatId(groupId.toString()),
                     message_id = MessageId(messageId)

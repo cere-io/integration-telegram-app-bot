@@ -23,6 +23,7 @@ class TelegramWebhook(
 
     private val log = LoggerFactory.getLogger(javaClass)
     private val handledTypes = setOf("group", "supergroup")
+    
 
     @POST
     @RunOnVirtualThread
@@ -47,15 +48,8 @@ class TelegramWebhook(
                     privateMessageHandler.handle(update)
                 }
                 in handledTypes -> {
-                    val message = update.message
-                    if (
-                        message?.reply_to_message?.from?.is_bot == true
-                    ) {
-                        // skip
-                    } else {
-                        log.info("Message doesn't match processing criteria - privacy mode active")
-                        groupMessageHandler.handle(update)
-                    }
+                    log.info("Processing group message")
+                    groupMessageHandler.handle(update)
                 }
                 else -> {
                     log.debug("Ignoring message type: $type")

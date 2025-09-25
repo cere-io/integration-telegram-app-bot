@@ -1,5 +1,6 @@
 package network.cere.telegram.bot
 
+import com.github.omarmiatello.telegram.BotCommand
 import com.github.omarmiatello.telegram.TelegramRequest
 import io.quarkus.runtime.Startup
 import org.eclipse.microprofile.rest.client.inject.RestClient
@@ -20,5 +21,14 @@ class RegisterWebhook(@RestClient botApi: BotApi, webhookConfig: WebhookConfig) 
         )
         botApi.setWebhook(rq)
         log.info("Telegram webhook set")
+
+        val commands = listOf(
+            BotCommand("fun", "Apply a filter to the image you attach"),
+            BotCommand("help", "Shows this help message")
+        )
+        runCatching {
+            botApi.setMyCommands(TelegramRequest.SetMyCommandsRequest(commands))
+            log.info("Bot commands set successfully")
+        }.onFailure { log.error("Failed to set bot commands", it) }
     }
 }

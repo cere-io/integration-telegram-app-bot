@@ -5,6 +5,7 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient
+import org.jboss.resteasy.reactive.RestPath
 import org.jboss.resteasy.reactive.RestQuery
 
 @RegisterRestClient(configKey = "rob-api")
@@ -21,4 +22,9 @@ interface RobClient {
     @Path("/campaign/{campaignId}")
     @CacheResult(cacheName = "campaign-cache")
     fun getCampaign(@PathParam("campaignId") campaignId: String): RobApiResponse<Campaign>
+
+    @GET
+    @Path("/data-services/{dataServiceId}/organizations")
+    @CacheResult(cacheName = "organizations-cache")
+    fun getOrganizations(@RestPath("dataServiceId") dataServiceId: String): RobApiResponse<List<Organization>>
 } 
